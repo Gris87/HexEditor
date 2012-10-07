@@ -11,12 +11,14 @@ public:
     Q_PROPERTY(QByteArray   Data                     READ data                     WRITE setData)
     Q_PROPERTY(Mode         Mode                     READ mode                     WRITE setMode)
     Q_PROPERTY(bool         ReadOnly                 READ isReadOnly               WRITE setReadOnly)
-    Q_PROPERTY(QFont        Font                     READ font                     WRITE setFont)
-    Q_PROPERTY(int          AddressOffset            READ addressOffset            WRITE setAddressOffset)
+    Q_PROPERTY(qint64       Position                 READ position                 WRITE setPosition)
     Q_PROPERTY(int          CursorPosition           READ cursorPosition           WRITE setCursorPosition)
     Q_PROPERTY(QColor       AddressBackgroundColor   READ addressBackgroundColor   WRITE setAddressBackgroundColor)
     Q_PROPERTY(QColor       HighlightingColor        READ highlightingColor        WRITE setHighlightingColor)
     Q_PROPERTY(QColor       SelectionColor           READ selectionColor           WRITE setSelectionColor)
+    Q_PROPERTY(bool         AddressVisible           READ isAddressVisible         WRITE setAddressVisible)
+    Q_PROPERTY(bool         TextVisible              READ isTextVisible            WRITE setTextVisible)
+    Q_PROPERTY(bool         HighlightingEnabled      READ isHighlightingEnabled    WRITE setHighlightingEnabled)
 
 
 
@@ -53,38 +55,53 @@ public:
     bool isReadOnly() const;
     void setReadOnly(const bool &aReadOnly);
 
-    QFont font() const;
-    void setFont(const QFont &aFont);
+    int position() const;
+    void setPosition(int aPosition);
 
-    int addressOffset() const;
-    void setAddressOffset(int aOffset);
-
-    int cursorPosition() const;
-    void setCursorPosition(int cusorPos);
+    qint64 cursorPosition() const;
+    void setCursorPosition(qint64 aCursorPos);
 
     QColor addressBackgroundColor() const;
-    void setAddressBackgroundColor(QColor const &color);
+    void setAddressBackgroundColor(QColor const &aColor);
 
     QColor highlightingColor() const;
-    void setHighlightingColor(QColor const &color);
+    void setHighlightingColor(QColor const &aColor);
 
     QColor selectionColor() const;
-    void setSelectionColor(QColor const &color);
+    void setSelectionColor(QColor const &aColor);
+
+    bool isAddressVisible() const;
+    void setAddressVisible(const bool &aAddressVisible);
+
+    bool isTextVisible() const;
+    void setTextVisible(const bool &aTextVisible);
+
+    bool isHighlightingEnabled() const;
+    void setHighlightingEnabled(const bool &aEnable);
 
 protected:
+    QByteArray mData;
+    Mode       mMode;
+    bool       mReadOnly;
+    qint64     mCursorPosition;
+    QColor     mAddressBackgroundColor;
+    QColor     mHighlightingColor;
+    QColor     mSelectionColor;
+    bool       mAddressVisible;
+    bool       mTextVisible;
+    bool       mHighlightingEnabled;
+
+    void updateScrollBars();
 
 public slots:
     void undo();
-    void redo();
-    void setAddressVisible(const bool &aAddressVisible);
-    void setTextVisible(const bool &aTextVisible);
-    void setHighlightingEnabled(const bool &aEnable);
+    void redo();    
 
 signals:
-    void positionChanged(int aPosition);
-    void sizeChanged(int aSize);
     void dataChanged();
-    void modeChanged(bool aMode);
+    void sizeChanged(int aSize);
+    void modeChanged(Mode aMode);
+    void positionChanged(int aPosition);
 };
 
 #endif // HEXEDITOR_H
