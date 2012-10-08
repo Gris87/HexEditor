@@ -1,7 +1,10 @@
 #include "hexeditor.h"
 
+#include <QPainter>
+#include <QScrollBar>
+
 HexEditor::HexEditor(QWidget *parent) :
-    QScrollArea(parent)
+    QAbstractScrollArea(parent)
 {
     mMode=INSERT;
     mReadOnly=false;
@@ -12,6 +15,16 @@ HexEditor::HexEditor(QWidget *parent) :
     mAddressVisible=true;
     mTextVisible=true;
     mHighlightingEnabled=true;
+}
+
+void HexEditor::undo()
+{
+    // TODO: Implement undo
+}
+
+void HexEditor::redo()
+{
+    // TODO: Implement redo
 }
 
 int HexEditor::indexOf(const QByteArray &aArray, int aFrom) const
@@ -49,20 +62,39 @@ QString HexEditor::toString()
     return QString::fromAscii(mData);
 }
 
-void HexEditor::undo()
-{
-    // TODO: Implement undo
-}
-
-void HexEditor::redo()
-{
-    // TODO: Implement redo
-}
+// ------------------------------------------------------------------
 
 void HexEditor::updateScrollBars()
 {
     // TODO: Implement updateScrollBars
+
+    horizontalScrollBar()->setRange(0, 200);
+    verticalScrollBar()->setRange(0, 200);
+
+/*
+    QSize areaSize=viewport()->size();
+
+    horizontalScrollBar()->setPageStep(areaSize.width()-mVerticalHeader_TotalWidth);
+    verticalScrollBar()->setPageStep(areaSize.height()-mHorizontalHeader_TotalHeight);
+
+    horizontalScrollBar()->setRange(0, mTotalWidth  - areaSize.width()  + 1);
+    verticalScrollBar()->setRange(0,   mTotalHeight - areaSize.height() + 1);
+    */
 }
+
+void HexEditor::paintEvent(QPaintEvent *event)
+{
+    // TODO: Implement paintEvent
+
+    QPainter painter(viewport());
+
+    int offsetX=-horizontalScrollBar()->value();
+    int offsetY=-verticalScrollBar()->value();
+
+    painter.drawLine(10+offsetX, 10+offsetY, 20+offsetX, 20+offsetY);
+}
+
+// ------------------------------------------------------------------
 
 QByteArray HexEditor::data() const
 {
@@ -74,8 +106,13 @@ void HexEditor::setData(QByteArray const &aData)
     if (mData!=aData)
     {
         mData=aData;
+
+        if ((mCursorPosition>>1)>mData.size())
+        {
+            mCursorPosition=mData.size()<<1;
+        }
+
         updateScrollBars();
-        // TODO: Update cursor position
         update();
 
         emit dataChanged();
@@ -126,16 +163,26 @@ qint64 HexEditor::cursorPosition() const
 
 void HexEditor::setCursorPosition(qint64 aCursorPos)
 {
+    if (aCursorPos<0)
+    {
+        aCursorPos=0;
+    }
+    else
+    if ((aCursorPos>>1)>mData.size())
+    {
+        aCursorPos=mData.size()<<1;
+    }
+
     if (mCursorPosition!=aCursorPos)
     {
-        bool aSamePos=(mCursorPosition/2==aCursorPos/2);
+        bool aSamePos=((mCursorPosition>>1)==(aCursorPos>>1));
 
         mCursorPosition=aCursorPos;
         update();
 
         if (!aSamePos)
         {
-            emit positionChanged(mCursorPosition/2);
+            emit positionChanged(mCursorPosition>>1);
         }
     }
 }
@@ -222,7 +269,6 @@ void HexEditor::setHighlightingEnabled(const bool &aEnable)
     if (mHighlightingEnabled!=aEnable)
     {
         mHighlightingEnabled=aEnable;
-        updateScrollBars();
         update();
     }
 }

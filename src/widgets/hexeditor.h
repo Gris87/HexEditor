@@ -1,9 +1,9 @@
 #ifndef HEXEDITOR_H
 #define HEXEDITOR_H
 
-#include <QScrollArea>
+#include <QAbstractScrollArea>
 
-class HexEditor : public QScrollArea
+class HexEditor : public QAbstractScrollArea
 {
     Q_OBJECT
 
@@ -44,7 +44,7 @@ public:
     void replace(int aPos, int aLength, const QByteArray &aArray);
     QString toString();
 
-
+    // ------------------------------------------------------------------
 
     QByteArray data() const;
     void setData(QByteArray const &aData);
@@ -92,6 +92,7 @@ protected:
     bool       mHighlightingEnabled;
 
     void updateScrollBars();
+    void paintEvent(QPaintEvent *event);
 
 public slots:
     void undo();

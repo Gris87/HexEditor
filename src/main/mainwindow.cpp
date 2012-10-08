@@ -9,6 +9,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     mHexEditor=new HexEditor(this);
     ui->hexLayout->addWidget(mHexEditor);
+
+    mHexEditor->setData(QString("Hello, World! It is test data for HexEditor...").toUtf8());
 }
 
 MainWindow::~MainWindow()
