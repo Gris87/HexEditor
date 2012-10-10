@@ -90,7 +90,7 @@ void HexEditor::updateScrollBars()
 
 
 
-    int aTotalWidth=(mAddressWidth+65)*mCharWidth; // mAddressWidth+1 + 16*2+15+1 + 16
+    int aTotalWidth=(mAddressWidth+66)*mCharWidth; // mAddressWidth + 1+16*2+15+1 + 1+16
     int aTotalHeight=mLinesCount*mCharHeight;
 
     if (mLinesCount>0)
@@ -126,6 +126,64 @@ void HexEditor::paintEvent(QPaintEvent *event)
 
     painter.setFont(mFont);
 
+    // HEX data
+    {
+        int aDataSize=mData.size();
+        int aCurRow=0;
+        int aCurCol=0;
+
+        for (int i=0; i<aDataSize; ++i)
+        {
+            int aCharY=aCurRow*(mCharHeight+LINE_INTERVAL)+aOffsetY;
+
+            if (aCharY+mCharHeight<0)
+            {
+                i+=15;
+                ++aCurRow;
+                continue;
+            }
+            else
+            if (aCharY>aViewHeight)
+            {
+                break;
+            }
+
+
+
+            QString aHexChar=QString::number(mData.at(i), 16).toUpper();
+
+            int aCharX=(mAddressWidth+1+aCurCol*3)*mCharWidth+aOffsetX;
+
+            if (aCharX>=(mAddressWidth-2)*mCharWidth && aCharX<=aViewWidth)
+            {
+                if (aHexChar.length()<2)
+                {
+                    painter.drawText(aCharX,            aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, "0");
+                    painter.drawText(aCharX+mCharWidth, aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, aHexChar.at(0));
+                }
+                else
+                {
+                    painter.drawText(aCharX,            aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, aHexChar.at(0));
+                    painter.drawText(aCharX+mCharWidth, aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, aHexChar.at(1));
+                }
+            }
+
+
+
+            ++aCurCol;
+
+            if (aCurCol==16)
+            {
+                ++aCurRow;
+                aCurCol=0;
+            }
+        }
+    }
+
+    // ASCII characters
+    {
+    }
+
     // Address field at the left side
     {
         painter.setBrush(QBrush(mAddressBackgroundColor));
@@ -133,12 +191,7 @@ void HexEditor::paintEvent(QPaintEvent *event)
 
         for (int i=0; i<mLinesCount; ++i)
         {
-            int aCharY=i*mCharHeight+aOffsetY;
-
-            if (i>0)
-            {
-                aCharY+=(i-1)*LINE_INTERVAL;
-            }
+            int aCharY=i*(mCharHeight+LINE_INTERVAL)+aOffsetY;
 
             if (aCharY+mCharHeight<0)
             {
@@ -150,11 +203,18 @@ void HexEditor::paintEvent(QPaintEvent *event)
                 break;
             }
 
+
+
             QString aHexAddress=QString::number(i, 16).toUpper();
 
             for (int j=0; j<mAddressWidth; ++j)
             {
                 int aCharX=j*mCharWidth;
+
+                if (aCharX>aViewWidth)
+                {
+                    break;
+                }
 
                 QChar aHexChar;
 
