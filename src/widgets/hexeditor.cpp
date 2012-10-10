@@ -11,6 +11,22 @@
 HexEditor::HexEditor(QWidget *parent) :
     QAbstractScrollArea(parent)
 {
+    for (int i=0; i<256; ++i)
+    {
+        char aChar=i;
+        mAsciiChars.append(QString::fromAscii(&aChar, 1));
+    }
+
+    mAsciiChars[9] =QChar(26);
+    mAsciiChars[10]=QChar(8629);
+    mAsciiChars[13]=QChar(8601);
+    mAsciiChars[32]=QChar(183);
+
+    for (int i=128; i<=160; ++i)
+    {
+        mAsciiChars[i]=QChar(9734);
+    }
+
     mMode=INSERT;
     mReadOnly=false;
     mCursorPosition=0;
@@ -126,7 +142,7 @@ void HexEditor::paintEvent(QPaintEvent *event)
 
     painter.setFont(mFont);
 
-    // HEX data
+    // HEX data and ASCII characters
     {
         int aDataSize=mData.size();
         int aCurRow=0;
@@ -148,9 +164,10 @@ void HexEditor::paintEvent(QPaintEvent *event)
                 break;
             }
 
+            // -----------------------------------------------------------------------------------------------------------------
 
-
-            QString aHexChar=QString::number(mData.at(i), 16).toUpper();
+            quint8 aAsciiChar=mData.at(i);
+            QString aHexChar=QString::number(aAsciiChar, 16).toUpper();
 
             int aCharX=(mAddressWidth+1+aCurCol*3)*mCharWidth+aOffsetX;
 
@@ -168,7 +185,16 @@ void HexEditor::paintEvent(QPaintEvent *event)
                 }
             }
 
+            // -----------------------------------------------------------------------------------------------------------------
 
+            aCharX=(mAddressWidth+50+aCurCol)*mCharWidth+aOffsetX;
+
+            if (aCharX>=(mAddressWidth-2)*mCharWidth && aCharX<=aViewWidth)
+            {
+                painter.drawText(aCharX, aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, mAsciiChars.at(aAsciiChar));
+            }
+
+            // -----------------------------------------------------------------------------------------------------------------
 
             ++aCurCol;
 
@@ -180,8 +206,10 @@ void HexEditor::paintEvent(QPaintEvent *event)
         }
     }
 
-    // ASCII characters
+    // Line delimeter
     {
+        int aLineX=(mAddressWidth+49)*mCharWidth+aOffsetX; // mAddressWidth + 1+16*2+15+1
+        painter.drawLine(aLineX, 0, aLineX, aViewHeight);
     }
 
     // Address field at the left side

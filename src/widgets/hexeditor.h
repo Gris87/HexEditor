@@ -96,10 +96,11 @@ protected:
     QColor     mSelectionColor;
     bool       mHighlightingEnabled;
 
-    int    mCharWidth;
-    int    mCharHeight;
-    quint8 mAddressWidth;
-    int    mLinesCount;
+    QString mAsciiChars;
+    int     mCharWidth;
+    int     mCharHeight;
+    quint8  mAddressWidth;
+    int     mLinesCount;
 
     void updateScrollBars();
     void resizeEvent(QResizeEvent *event);

@@ -10,14 +10,21 @@ MainWindow::MainWindow(QWidget *parent) :
     mHexEditor=new HexEditor(this);
     ui->hexLayout->addWidget(mHexEditor);
 
-    QString aData="Hello, World! It is test data for HexEditor...\n\tYou can modify any binary data with it. Please try.\nGarbage:";
+    QString aData="Hello, World!\n    It is test data for HexEditor...\n\tYou can modify any binary data with it. Please try.\nGarbage:";
 
     for (int i=0; i<1024; ++i)
     {
         aData.append("X");
     }
 
-    mHexEditor->setData(aData.toUtf8());
+    QByteArray aArray=aData.toUtf8();
+
+    for (int i=0; i<256; ++i)
+    {
+        aArray.append(i);
+    }
+
+    mHexEditor->setData(aArray);
 }
 
 MainWindow::~MainWindow()
