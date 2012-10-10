@@ -13,12 +13,16 @@ public:
     Q_PROPERTY(bool         ReadOnly                 READ isReadOnly               WRITE setReadOnly)
     Q_PROPERTY(qint64       Position                 READ position                 WRITE setPosition)
     Q_PROPERTY(int          CursorPosition           READ cursorPosition           WRITE setCursorPosition)
+    Q_PROPERTY(QFont        Font                     READ font                     WRITE setFont)
     Q_PROPERTY(QColor       AddressBackgroundColor   READ addressBackgroundColor   WRITE setAddressBackgroundColor)
     Q_PROPERTY(QColor       HighlightingColor        READ highlightingColor        WRITE setHighlightingColor)
     Q_PROPERTY(QColor       SelectionColor           READ selectionColor           WRITE setSelectionColor)
-    Q_PROPERTY(bool         AddressVisible           READ isAddressVisible         WRITE setAddressVisible)
-    Q_PROPERTY(bool         TextVisible              READ isTextVisible            WRITE setTextVisible)
     Q_PROPERTY(bool         HighlightingEnabled      READ isHighlightingEnabled    WRITE setHighlightingEnabled)
+
+    Q_PROPERTY(int      charWidth      READ charWidth)
+    Q_PROPERTY(int      charHeight     READ charHeight)
+    Q_PROPERTY(quint8   addressWidth   READ addressWidth)
+    Q_PROPERTY(int      linesCount     READ linesCount)
 
 
 
@@ -61,6 +65,9 @@ public:
     qint64 cursorPosition() const;
     void setCursorPosition(qint64 aCursorPos);
 
+    QFont font() const;
+    void setFont(const QFont &aFont);
+
     QColor addressBackgroundColor() const;
     void setAddressBackgroundColor(QColor const &aColor);
 
@@ -70,33 +77,37 @@ public:
     QColor selectionColor() const;
     void setSelectionColor(QColor const &aColor);
 
-    bool isAddressVisible() const;
-    void setAddressVisible(const bool &aAddressVisible);
-
-    bool isTextVisible() const;
-    void setTextVisible(const bool &aTextVisible);
-
     bool isHighlightingEnabled() const;
     void setHighlightingEnabled(const bool &aEnable);
+
+    int    charWidth();
+    int    charHeight();
+    quint8 addressWidth();
+    int    linesCount();
 
 protected:
     QByteArray mData;
     Mode       mMode;
     bool       mReadOnly;
     qint64     mCursorPosition;
+    QFont      mFont;
     QColor     mAddressBackgroundColor;
     QColor     mHighlightingColor;
     QColor     mSelectionColor;
-    bool       mAddressVisible;
-    bool       mTextVisible;
     bool       mHighlightingEnabled;
 
+    int    mCharWidth;
+    int    mCharHeight;
+    quint8 mAddressWidth;
+    int    mLinesCount;
+
     void updateScrollBars();
+    void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);
 
 public slots:
     void undo();
-    void redo();    
+    void redo();
 
 signals:
     void dataChanged();

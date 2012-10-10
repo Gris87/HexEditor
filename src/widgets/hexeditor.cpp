@@ -3,18 +3,24 @@
 #include <QPainter>
 #include <QScrollBar>
 
+#include <math.h>
+
+#define LINE_INTERVAL 2
+#define CHAR_INTERVAL 2
+
 HexEditor::HexEditor(QWidget *parent) :
     QAbstractScrollArea(parent)
 {
     mMode=INSERT;
     mReadOnly=false;
     mCursorPosition=0;
-    mAddressBackgroundColor.setRgb(128, 128, 128);
+    mAddressBackgroundColor.setRgb(192, 192, 192);
     mHighlightingColor.setRgb(255, 0, 255);
     mSelectionColor.setRgb(0, 0, 255);
-    mAddressVisible=true;
-    mTextVisible=true;
     mHighlightingEnabled=true;
+
+    mFont=QFont("Courier new", 1);     //Special action to calculate mCharWidth and mCharHeight at the next step
+    setFont(QFont("Courier new", 10));
 }
 
 void HexEditor::undo()
@@ -66,32 +72,105 @@ QString HexEditor::toString()
 
 void HexEditor::updateScrollBars()
 {
-    // TODO: Implement updateScrollBars
+    mAddressWidth=1;
+    int aDataSize=mData.size();
 
-    horizontalScrollBar()->setRange(0, 200);
-    verticalScrollBar()->setRange(0, 200);
+    while (aDataSize>16)
+    {
+        ++mAddressWidth;
+        aDataSize>>=4;
+    }
 
-/*
+    mLinesCount=floor(mData.size()/16.0f);
+
+    if (mData.size() % 16!=0)
+    {
+        ++mLinesCount;
+    }
+
+
+
+    int aTotalWidth=(mAddressWidth+65)*mCharWidth; // mAddressWidth+1 + 16*2+15+1 + 16
+    int aTotalHeight=mLinesCount*mCharHeight;
+
+    if (mLinesCount>0)
+    {
+        aTotalHeight+=(mLinesCount-1)*LINE_INTERVAL;
+    }
+
+
+
     QSize areaSize=viewport()->size();
 
-    horizontalScrollBar()->setPageStep(areaSize.width()-mVerticalHeader_TotalWidth);
-    verticalScrollBar()->setPageStep(areaSize.height()-mHorizontalHeader_TotalHeight);
+    horizontalScrollBar()->setPageStep(areaSize.width());
+    verticalScrollBar()->setPageStep(areaSize.height());
 
-    horizontalScrollBar()->setRange(0, mTotalWidth  - areaSize.width()  + 1);
-    verticalScrollBar()->setRange(0,   mTotalHeight - areaSize.height() + 1);
-    */
+    horizontalScrollBar()->setRange(0, aTotalWidth  - areaSize.width()  + 1);
+    verticalScrollBar()->setRange(  0, aTotalHeight - areaSize.height() + 1);
+}
+
+void HexEditor::resizeEvent(QResizeEvent *event)
+{
+    QAbstractScrollArea::resizeEvent(event);
+    updateScrollBars();
 }
 
 void HexEditor::paintEvent(QPaintEvent *event)
 {
-    // TODO: Implement paintEvent
-
     QPainter painter(viewport());
 
-    int offsetX=-horizontalScrollBar()->value();
-    int offsetY=-verticalScrollBar()->value();
+    int aOffsetX=-horizontalScrollBar()->value();
+    int aOffsetY=-verticalScrollBar()->value();
+    int aViewWidth=viewport()->width();
+    int aViewHeight=viewport()->height();
 
-    painter.drawLine(10+offsetX, 10+offsetY, 20+offsetX, 20+offsetY);
+    painter.setFont(mFont);
+
+    // Address field at the left side
+    {
+        painter.setBrush(QBrush(mAddressBackgroundColor));
+        painter.fillRect(0, 0, mAddressWidth*mCharWidth, aViewHeight, mAddressBackgroundColor);
+
+        for (int i=0; i<mLinesCount; ++i)
+        {
+            int aCharY=i*mCharHeight+aOffsetY;
+
+            if (i>0)
+            {
+                aCharY+=(i-1)*LINE_INTERVAL;
+            }
+
+            if (aCharY+mCharHeight<0)
+            {
+                continue;
+            }
+            else
+            if (aCharY>aViewHeight)
+            {
+                break;
+            }
+
+            QString aHexAddress=QString::number(i, 16).toUpper();
+
+            for (int j=0; j<mAddressWidth; ++j)
+            {
+                int aCharX=j*mCharWidth;
+
+                QChar aHexChar;
+
+                if (j<mAddressWidth-1 && mAddressWidth-j-2<aHexAddress.length())
+                {
+                    aHexChar=aHexAddress.at(mAddressWidth-j-2);
+                }
+                else
+                {
+                    aHexChar='0';
+                }
+
+                painter.drawText(aCharX, aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, aHexChar);
+            }
+        }
+    }
 }
 
 // ------------------------------------------------------------------
@@ -187,6 +266,39 @@ void HexEditor::setCursorPosition(qint64 aCursorPos)
     }
 }
 
+QFont HexEditor::font() const
+{
+    return mFont;
+}
+
+void HexEditor::setFont(const QFont &aFont)
+{
+    if (mFont!=aFont)
+    {
+        mFont=aFont;
+
+        QFontMetrics aFontMetrics(mFont);
+
+        mCharWidth=0;
+
+        for (int i=0; i<16; ++i)
+        {
+            int aCharWidth=aFontMetrics.width(QString::number(i, 16).at(0));
+
+            if (aCharWidth>mCharWidth)
+            {
+                mCharWidth=aCharWidth;
+            }
+        }
+
+        mCharWidth+=CHAR_INTERVAL;
+        mCharHeight=aFontMetrics.height()+CHAR_INTERVAL;
+
+        updateScrollBars();
+        update();
+    }
+}
+
 QColor HexEditor::addressBackgroundColor() const
 {
     return mAddressBackgroundColor;
@@ -229,36 +341,6 @@ void HexEditor::setSelectionColor(QColor const &aColor)
     }
 }
 
-bool HexEditor::isAddressVisible() const
-{
-    return mAddressVisible;
-}
-
-void HexEditor::setAddressVisible(const bool &aAddressVisible)
-{
-    if (mAddressVisible!=aAddressVisible)
-    {
-        mAddressVisible=aAddressVisible;
-        updateScrollBars();
-        update();
-    }
-}
-
-bool HexEditor::isTextVisible() const
-{
-    return mTextVisible;
-}
-
-void HexEditor::setTextVisible(const bool &aTextVisible)
-{
-    if (mTextVisible!=aTextVisible)
-    {
-        mTextVisible=aTextVisible;
-        updateScrollBars();
-        update();
-    }
-}
-
 bool HexEditor::isHighlightingEnabled() const
 {
     return mHighlightingEnabled;
@@ -271,4 +353,24 @@ void HexEditor::setHighlightingEnabled(const bool &aEnable)
         mHighlightingEnabled=aEnable;
         update();
     }
+}
+
+int HexEditor::charWidth()
+{
+    return mCharWidth;
+}
+
+int HexEditor::charHeight()
+{
+    return mCharHeight;
+}
+
+quint8 HexEditor::addressWidth()
+{
+    return mAddressWidth;
+}
+
+int HexEditor::linesCount()
+{
+    return mLinesCount;
 }
