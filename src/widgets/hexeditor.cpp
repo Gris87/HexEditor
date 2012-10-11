@@ -3,6 +3,8 @@
 #include <QPainter>
 #include <QScrollBar>
 #include <QKeyEvent>
+#include <QApplication>
+#include <QClipboard>
 
 #include <math.h>
 
@@ -151,14 +153,51 @@ void HexEditor::resetCursorTimer()
 
 void HexEditor::resetSelection()
 {
-    // TODO: Implement resetSelection
-    emit selectionChanged(mSelectionStart, mSelectionEnd);
+    int aCurPosition=mCursorPosition>>1;
+
+    bool aSelectionChanged=(mSelectionStart!=aCurPosition) || (mSelectionEnd!=aCurPosition);
+
+    mSelectionInit=aCurPosition;
+    mSelectionStart=aCurPosition;
+    mSelectionEnd=aCurPosition;
+
+    if (aSelectionChanged)
+    {
+        emit selectionChanged(mSelectionStart, mSelectionEnd);
+    }
 }
 
 void HexEditor::updateSelection()
 {
-    // TODO: Implement updateSelection
-    emit selectionChanged(mSelectionStart, mSelectionEnd);
+    int aCurPosition=mCursorPosition>>1;
+
+    bool aSelectionChanged=false;
+
+    if (aCurPosition<mSelectionInit)
+    {
+        if (mSelectionStart!=aCurPosition || mSelectionEnd!=mSelectionInit)
+        {
+            mSelectionStart=aCurPosition;
+            mSelectionEnd=mSelectionInit;
+
+            aSelectionChanged=true;
+        }
+    }
+    else
+    {
+        if (mSelectionStart!=mSelectionInit || mSelectionEnd!=aCurPosition)
+        {
+            mSelectionStart=mSelectionInit;
+            mSelectionEnd=aCurPosition;
+
+            aSelectionChanged=true;
+        }
+    }
+
+    if (aSelectionChanged)
+    {
+        emit selectionChanged(mSelectionStart, mSelectionEnd);
+    }
 }
 
 void HexEditor::scrollToCursor()
@@ -436,13 +475,29 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
 
     if (event->matches(QKeySequence::MoveToPreviousChar))
     {
-        setCursorPosition(mCursorPosition-1);
+        if (mCursorAtTheLeft)
+        {
+            setCursorPosition(mCursorPosition-1);
+        }
+        else
+        {
+            setPosition(position()-1);
+        }
+
         cursorMoved(false);
     }
     else
     if (event->matches(QKeySequence::MoveToNextChar))
     {
-        setCursorPosition(mCursorPosition+1);
+        if (mCursorAtTheLeft)
+        {
+            setCursorPosition(mCursorPosition+1);
+        }
+        else
+        {
+            setPosition(position()+1);
+        }
+
         cursorMoved(false);
     }
     else
@@ -499,6 +554,69 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
     else
     if (event->matches(QKeySequence::SelectAll))
     {
+        mSelectionInit=0;
+        setCursorPosition(mData.size()*2);
+        cursorMoved(true);
+    }
+    else
+    if (event->matches(QKeySequence::SelectPreviousChar))
+    {
+        setPosition(position()-1);
+        cursorMoved(true);
+    }
+    else
+    if (event->matches(QKeySequence::SelectNextChar))
+    {
+        setPosition(position()+1);
+        cursorMoved(true);
+    }
+    else
+    if (event->matches(QKeySequence::SelectPreviousLine))
+    {
+        setCursorPosition(mCursorPosition-32);
+        cursorMoved(true);
+    }
+    else
+    if (event->matches(QKeySequence::SelectNextLine))
+    {
+        setCursorPosition(mCursorPosition+32);
+        cursorMoved(true);
+    }
+    else
+    if (event->matches(QKeySequence::SelectStartOfLine))
+    {
+        setCursorPosition(mCursorPosition-(mCursorPosition % 32));
+        cursorMoved(true);
+    }
+    else
+    if (event->matches(QKeySequence::SelectEndOfLine))
+    {
+        setCursorPosition(mCursorPosition | 31);
+        cursorMoved(true);
+    }
+    else
+    if (event->matches(QKeySequence::SelectPreviousPage))
+    {
+        setCursorPosition(mCursorPosition-viewport()->height()/(mCharHeight+LINE_INTERVAL)*32);
+        cursorMoved(true);
+    }
+    else
+    if (event->matches(QKeySequence::SelectNextPage))
+    {
+        setCursorPosition(mCursorPosition+viewport()->height()/(mCharHeight+LINE_INTERVAL)*32);
+        cursorMoved(true);
+    }
+    else
+    if (event->matches(QKeySequence::SelectStartOfDocument))
+    {
+        setCursorPosition(0);
+        cursorMoved(true);
+    }
+    else
+    if (event->matches(QKeySequence::SelectEndOfDocument))
+    {
+        setCursorPosition(mData.size()*2);
+        cursorMoved(true);
     }
     // =======================================================================================
     //                                      Others
@@ -506,6 +624,64 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
     else
     if (event->matches(QKeySequence::Copy))
     {
+        QString aToClipboard;
+
+        if (mCursorAtTheLeft)
+        {
+            if (mSelectionStart==mSelectionEnd)
+            {
+                if (mSelectionStart<mData.size())
+                {
+                    quint8 aChar=mData.at(mSelectionStart);
+                    aToClipboard=QString::number(aChar, 16).toUpper();
+
+                    if (aToClipboard.length()==1)
+                    {
+                        aToClipboard.insert(0, "0");
+                    }
+                }
+            }
+            else
+            {
+                for (int i=mSelectionStart; i<mSelectionEnd && i<mData.size(); ++i)
+                {
+                    quint8 aChar=mData.at(i);
+                    QString aHexChar=QString::number(aChar, 16).toUpper();
+
+                    if (aHexChar.length()==1)
+                    {
+                        aToClipboard.append("0");
+                    }
+
+                    aToClipboard.append(aHexChar);
+                }
+            }
+        }
+        else
+        {
+            if (mSelectionStart==mSelectionEnd)
+            {
+                if (mSelectionStart<mData.size())
+                {
+                    char aChar=mData.at(mSelectionStart);
+                    aToClipboard=QString::fromAscii(&aChar, 1);
+                }
+            }
+            else
+            {
+                for (int i=mSelectionStart; i<mSelectionEnd && i<mData.size(); ++i)
+                {
+                    char aChar=mData.at(i);
+
+                    if (aChar)
+                    {
+                        aToClipboard.append(QString::fromAscii(&aChar, 1));
+                    }
+                }
+            }
+        }
+
+        QApplication::clipboard()->setText(aToClipboard);
     }
     else
     if ((event->key() == Qt::Key_Tab) && (event->modifiers() == Qt::NoModifier))
