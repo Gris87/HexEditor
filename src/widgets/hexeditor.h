@@ -89,8 +89,13 @@ protected:
     QTimer  mCursorTimer;
 
     void updateScrollBars();
+    void resetCursorTimer();
+    void resetSelection();
+    void updateSelection();
+    void scrollToCursor();
     void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);
+    void keyPressEvent(QKeyEvent *event);
 
 public slots:
     void undo();

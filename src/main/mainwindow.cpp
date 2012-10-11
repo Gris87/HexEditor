@@ -24,6 +24,11 @@ MainWindow::MainWindow(QWidget *parent) :
         aArray.append(i);
     }
 
+    aArray.append(46);
+    aArray.append(78);
+    aArray.append(56);
+    aArray.append(67);
+
     mHexEditor->setData(aArray);
 
     QPalette aPalette=mHexEditor->palette();

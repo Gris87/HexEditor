@@ -2,6 +2,7 @@
 
 #include <QPainter>
 #include <QScrollBar>
+#include <QKeyEvent>
 
 #include <math.h>
 
@@ -132,6 +133,63 @@ void HexEditor::updateScrollBars()
     verticalScrollBar()->setRange(  0, aTotalHeight - areaSize.height() + 1);
 }
 
+void HexEditor::resetCursorTimer()
+{
+    mCursorVisible=true;
+
+    mCursorTimer.stop();
+    mCursorTimer.start(500);
+
+    viewport()->update();
+}
+
+void HexEditor::resetSelection()
+{
+    // TODO: Implement resetSelection
+}
+
+void HexEditor::updateSelection()
+{
+    // TODO: Implement updateSelection
+}
+
+void HexEditor::scrollToCursor()
+{
+    int aOffsetX=-horizontalScrollBar()->value();
+    int aOffsetY=-verticalScrollBar()->value();
+    int aViewWidth=viewport()->width();
+    int aViewHeight=viewport()->height();
+
+
+
+    int aCurCol=mCursorPosition % 32;
+    bool aIsSecondChar=(aCurCol & 1);
+    aCurCol>>=1;
+
+    int aCurRow=floor(mCursorPosition/32.0f);
+
+    int aCursorX;
+    int aCursorY=aCurRow*(mCharHeight+LINE_INTERVAL);
+
+    if (mCursorAtTheLeft)
+    {
+        aCursorX=(mAddressWidth+1+aCurCol*3)*mCharWidth;
+
+        if (aIsSecondChar)
+        {
+            aCursorX+=mCharWidth;
+        }
+    }
+    else
+    {
+        aCursorX=(mAddressWidth+50+aCurCol)*mCharWidth;
+    }
+
+
+
+
+}
+
 void HexEditor::resizeEvent(QResizeEvent *event)
 {
     QAbstractScrollArea::resizeEvent(event);
@@ -167,9 +225,12 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
             if (aCursorY+mCharHeight>=0 && aCursorY<=aViewHeight)
             {
                 int aCurCol=mCursorPosition % 32;
+                bool aIsSecondChar=(aCurCol & 1);
+                aCurCol>>=1;
+
                 int aCursorX=(mAddressWidth+1+aCurCol*3)*mCharWidth+aOffsetX;
 
-                if (aCurCol % 2==1)
+                if (aIsSecondChar)
                 {
                     aCursorX+=mCharWidth;
                 }
@@ -331,6 +392,93 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
     }
 }
 
+void HexEditor::keyPressEvent(QKeyEvent *event)
+{
+    // =======================================================================================
+    //                                     Movements
+    // =======================================================================================
+
+    if (event->matches(QKeySequence::MoveToNextChar))
+    {
+        setCursorPosition(mCursorPosition+1);
+        resetSelection();
+        resetCursorTimer();
+        scrollToCursor();
+    }
+    else
+    if (event->matches(QKeySequence::MoveToPreviousChar))
+    {
+        setCursorPosition(mCursorPosition - 1);
+        resetSelection();
+        resetCursorTimer();
+        scrollToCursor();
+    }
+    else
+    if (event->matches(QKeySequence::MoveToPreviousLine))
+    {
+        setCursorPosition(mCursorPosition-32);
+        resetSelection();
+        resetCursorTimer();
+        scrollToCursor();
+    }
+    else
+    if (event->matches(QKeySequence::MoveToNextLine))
+    {
+        setCursorPosition(mCursorPosition+32);
+        resetSelection();
+        resetCursorTimer();
+        scrollToCursor();
+    }
+    else
+    if (event->matches(QKeySequence::MoveToEndOfLine))
+    {
+        setCursorPosition(mCursorPosition | 31);
+        resetSelection();
+        resetCursorTimer();
+        scrollToCursor();
+    }
+    else
+    if (event->matches(QKeySequence::MoveToStartOfLine))
+    {
+        setCursorPosition(mCursorPosition-(mCursorPosition % 32));
+        resetSelection();
+        resetCursorTimer();
+        scrollToCursor();
+    }
+    else
+    if (event->matches(QKeySequence::MoveToNextPage))
+    {
+        setCursorPosition(mCursorPosition+viewport()->height()/(mCharHeight+LINE_INTERVAL)*32);
+        resetSelection();
+        resetCursorTimer();
+        scrollToCursor();
+    }
+    else
+    if (event->matches(QKeySequence::MoveToPreviousPage))
+    {
+        setCursorPosition(mCursorPosition-viewport()->height()/(mCharHeight+LINE_INTERVAL)*32);
+        resetSelection();
+        resetCursorTimer();
+        scrollToCursor();
+    }
+    else
+    if (event->matches(QKeySequence::MoveToEndOfDocument))
+    {
+        setCursorPosition(mData.size()*2);
+        resetSelection();
+        resetCursorTimer();
+        scrollToCursor();
+    }
+    else
+    if (event->matches(QKeySequence::MoveToStartOfDocument))
+    {
+        setCursorPosition(0);
+        resetSelection();
+        resetCursorTimer();
+        scrollToCursor();
+    }
+}
+
 // ------------------------------------------------------------------
 
 QByteArray HexEditor::data() const
@@ -405,7 +553,7 @@ void HexEditor::setCursorPosition(qint64 aCursorPos)
         aCursorPos=0;
     }
     else
-    if ((aCursorPos>>1)>mData.size())
+    if (aCursorPos>mData.size()<<1)
     {
         aCursorPos=mData.size()<<1;
     }
