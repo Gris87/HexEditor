@@ -276,20 +276,71 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
     QPainter painter(viewport());
     QPalette aPalette=palette();
 
+    QColor aTextColor=aPalette.color(QPalette::Text);
+    QColor aHighlightColor=aPalette.color(QPalette::Highlight);
+    QColor aHighlightedTextColor=aPalette.color(QPalette::HighlightedText);
+    QColor aAlternateBaseColor=aPalette.color(QPalette::AlternateBase);
+
     int aOffsetX=-horizontalScrollBar()->value();
     int aOffsetY=-verticalScrollBar()->value();
     int aViewWidth=viewport()->width();
     int aViewHeight=viewport()->height();
 
     painter.setFont(mFont);
-    painter.setPen(aPalette.color(QPalette::Text));
 
     // Draw background for chars (Selection and cursor)
     {
         // Check for selection
-        if (false)
+        if (mSelectionStart!=mSelectionEnd)
         {
             // Draw selection
+            int aStartRow=floor(mSelectionStart/16.0f);
+            int aStartCol=mSelectionStart % 16;
+
+            int aEndRow=floor((mSelectionEnd-1)/16.0f);
+            int aEndCol=(mSelectionEnd-1) % 16;
+
+            int aStartLeftX=(mAddressWidth+1+aStartCol*3)*mCharWidth+aOffsetX;
+            int aStartRightX=(mAddressWidth+50+aStartCol)*mCharWidth+aOffsetX;
+            int aStartY=aStartRow*(mCharHeight+LINE_INTERVAL)+aOffsetY;
+
+            int aEndLeftX=(mAddressWidth+1+aEndCol*3)*mCharWidth+aOffsetX;
+            int aEndRightX=(mAddressWidth+50+aEndCol)*mCharWidth+aOffsetX;
+            int aEndY=aEndRow*(mCharHeight+LINE_INTERVAL)+aOffsetY;
+
+            if (aStartRow==aEndRow)
+            {
+                painter.fillRect(aStartLeftX, aStartY, aEndLeftX-aStartLeftX+mCharWidth*2, mCharHeight, aHighlightColor);
+                painter.fillRect(aStartRightX, aStartY, aEndRightX-aStartRightX+mCharWidth, mCharHeight, aHighlightColor);
+            }
+            else
+            {
+                QRect aHexRect(
+                               mAddressWidth*mCharWidth+aOffsetX,
+                               (aStartRow+1)*(mCharHeight+LINE_INTERVAL)-LINE_INTERVAL+aOffsetY,
+                               49*mCharWidth,
+                               (aEndRow-aStartRow-1)*(mCharHeight+LINE_INTERVAL)+LINE_INTERVAL
+                              );
+
+                QRect aTextRect(
+                                (mAddressWidth+50)*mCharWidth+aOffsetX,
+                                (aStartRow+1)*(mCharHeight+LINE_INTERVAL)-LINE_INTERVAL+aOffsetY,
+                                16*mCharWidth,
+                                (aEndRow-aStartRow-1)*(mCharHeight+LINE_INTERVAL)+LINE_INTERVAL
+                               );
+
+                if (aEndRow>aStartRow+1)
+                {
+                    painter.fillRect(aHexRect,  aHighlightColor);
+                    painter.fillRect(aTextRect, aHighlightColor);
+                }
+
+                painter.fillRect(aStartLeftX, aStartY, aHexRect.right()-aStartLeftX+1, mCharHeight, aHighlightColor);
+                painter.fillRect(aHexRect.left(), aEndY-LINE_INTERVAL, aEndLeftX-aHexRect.left()+mCharWidth*2, mCharHeight+LINE_INTERVAL, aHighlightColor);
+
+                painter.fillRect(aStartRightX, aStartY, aTextRect.right()-aStartRightX+1, mCharHeight, aHighlightColor);
+                painter.fillRect(aTextRect.left(), aEndY-LINE_INTERVAL, aEndRightX-aTextRect.left()+mCharWidth, mCharHeight+LINE_INTERVAL, aHighlightColor);
+            }
         }
         else
         {
@@ -324,7 +375,7 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
                     )
                    )
                 {
-                    painter.fillRect(aCursorX, aCursorY, mCharWidth, mCharHeight, aPalette.color(QPalette::Highlight));
+                    painter.fillRect(aCursorX, aCursorY, mCharWidth, mCharHeight, aHighlightColor);
                 }
 
                 aCursorX=(mAddressWidth+50+aCurCol)*mCharWidth+aOffsetX;
@@ -343,7 +394,7 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
                     )
                    )
                 {
-                    painter.fillRect(aCursorX, aCursorY, mCharWidth, mCharHeight, aPalette.color(QPalette::Highlight));
+                    painter.fillRect(aCursorX, aCursorY, mCharWidth, mCharHeight, aHighlightColor);
                 }
             }
         }
@@ -380,16 +431,47 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
 
             if (aCharX>=(mAddressWidth-2)*mCharWidth && aCharX<=aViewWidth)
             {
-                if (aHexChar.length()<2)
+                if (i>=mSelectionStart && i<mSelectionEnd)
                 {
-                    painter.drawText(aCharX,            aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, "0");
-                    painter.drawText(aCharX+mCharWidth, aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, aHexChar.at(0));
+                    painter.setPen(aHighlightedTextColor);
                 }
                 else
                 {
-                    painter.drawText(aCharX,            aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, aHexChar.at(0));
-                    painter.drawText(aCharX+mCharWidth, aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, aHexChar.at(1));
+                    painter.setPen(aTextColor);
                 }
+
+                if (aHexChar.length()<2)
+                {
+                    aHexChar.insert(0, "0");
+                }
+
+                if (i==mSelectionStart && i==mSelectionEnd)
+                {
+                    if ((mCursorAtTheLeft && !mCursorVisible) || (mCursorPosition & 1))
+                    {
+                        painter.setPen(aTextColor);
+                    }
+                    else
+                    {
+                        painter.setPen(aHighlightedTextColor);
+                    }
+                }
+
+                painter.drawText(aCharX,            aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, aHexChar.at(0));
+
+                if (i==mSelectionStart && i==mSelectionEnd)
+                {
+                    if ((!mCursorAtTheLeft || mCursorVisible) && (mCursorPosition & 1))
+                    {
+                        painter.setPen(aHighlightedTextColor);
+                    }
+                    else
+                    {
+                        painter.setPen(aTextColor);
+                    }
+                }
+
+                painter.drawText(aCharX+mCharWidth, aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, aHexChar.at(1));
             }
 
             // -----------------------------------------------------------------------------------------------------------------
@@ -398,6 +480,33 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
 
             if (aCharX>=(mAddressWidth-2)*mCharWidth && aCharX<=aViewWidth)
             {
+                if (
+                    (
+                     i==mSelectionStart
+                     &&
+                     i==mSelectionEnd
+                     &&
+                     (
+                      mCursorAtTheLeft
+                      ||
+                      mCursorVisible
+                     )
+                    )
+                    ||
+                    (
+                     i>=mSelectionStart
+                     &&
+                     i<mSelectionEnd
+                    )
+                   )
+                {
+                    painter.setPen(aHighlightedTextColor);
+                }
+                else
+                {
+                    painter.setPen(aTextColor);
+                }
+
                 painter.drawText(aCharX, aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, mAsciiChars.at(aAsciiChar));
             }
 
@@ -413,15 +522,23 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
         }
     }
 
-    // Line delimeter
+    // Line delimeters
     {
-        int aLineX=(mAddressWidth+49)*mCharWidth+aOffsetX; // mAddressWidth + 1+16*2+15+1
+        painter.setPen(QColor(0, 0, 0));
+
+        int aLineX;
+
+        aLineX=mAddressWidth*mCharWidth;
+        painter.drawLine(aLineX, 0, aLineX, aViewHeight);
+
+        aLineX=(mAddressWidth+49)*mCharWidth+aOffsetX; // mAddressWidth + 1+16*2+15+1
         painter.drawLine(aLineX, 0, aLineX, aViewHeight);
     }
 
     // Address field at the left side
     {
-        painter.fillRect(0, 0, mAddressWidth*mCharWidth, aViewHeight, aPalette.color(QPalette::AlternateBase));
+        painter.setPen(aTextColor);
+        painter.fillRect(0, 0, mAddressWidth*mCharWidth, aViewHeight, aAlternateBaseColor);
 
         for (int i=0; i<mLinesCount; ++i)
         {
@@ -454,7 +571,7 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
 
                 if (j<mAddressWidth-1 && mAddressWidth-j-2<aHexAddress.length())
                 {
-                    aHexChar=aHexAddress.at(mAddressWidth-j-2);
+                    aHexChar=aHexAddress.at(aHexAddress.length()-mAddressWidth+j+1);
                 }
                 else
                 {
