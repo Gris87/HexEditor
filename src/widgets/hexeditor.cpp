@@ -47,6 +47,8 @@ HexEditor::HexEditor(QWidget *parent) :
     mCursorAtTheLeft=true;
     connect(&mCursorTimer, SIGNAL(timeout()), this, SLOT(cursorBlicking()));
     mCursorTimer.start(500);
+
+    mLeftButtonPressed=false;
 }
 
 void HexEditor::undo()
@@ -63,6 +65,11 @@ void HexEditor::cursorBlicking()
 {
     mCursorVisible=!mCursorVisible;
     viewport()->update();
+}
+
+int HexEditor::charAt(QPoint aPos)
+{
+    return 0;
 }
 
 int HexEditor::indexOf(const QByteArray &aArray, int aFrom) const
@@ -833,6 +840,49 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
         {
             redo();
         }
+    }
+}
+
+void HexEditor::mousePressEvent(QMouseEvent *event)
+{
+    mLeftButtonPressed=(event->button()==Qt::LeftButton);
+
+    if (mLeftButtonPressed)
+    {
+        setCursorPosition(charAt(event->pos()));
+        cursorMoved(event->modifiers() & Qt::ShiftModifier);
+    }
+
+    QAbstractScrollArea::mousePressEvent(event);
+}
+
+void HexEditor::mouseMoveEvent(QMouseEvent *event)
+{
+    if (mLeftButtonPressed)
+    {
+        setCursorPosition(charAt(event->pos()));
+        cursorMoved(true);
+    }
+
+    QAbstractScrollArea::mouseMoveEvent(event);
+}
+
+void HexEditor::mouseReleaseEvent(QMouseEvent *event)
+{
+    mLeftButtonPressed=false;
+
+    QAbstractScrollArea::mouseReleaseEvent(event);
+}
+
+void HexEditor::wheelEvent(QWheelEvent *event)
+{
+    if (event->delta()>=0)
+    {
+        verticalScrollBar()->setValue(verticalScrollBar()->value()-10*(mCharHeight+LINE_INTERVAL));
+    }
+    else
+    {
+        verticalScrollBar()->setValue(verticalScrollBar()->value()+10*(mCharHeight+LINE_INTERVAL));
     }
 }
 

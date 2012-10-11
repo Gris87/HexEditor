@@ -38,6 +38,7 @@ public:
 
 
 
+    int charAt(QPoint aPos);
     int indexOf(const QByteArray &aArray, int aFrom=0) const;
     int lastIndexOf(const QByteArray &aArray, int aFrom=0) const;
     void insert(int aIndex, const QByteArray &aArray);
@@ -91,15 +92,21 @@ protected:
     bool    mCursorAtTheLeft;
     QTimer  mCursorTimer;
 
+    bool    mLeftButtonPressed;
+
     void updateScrollBars();
     void resetCursorTimer();
     void resetSelection();
     void updateSelection();
-    void scrollToCursor();
+    void scrollToCursor();    
     void cursorMoved(bool aKeepSelection);
     void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);
     void keyPressEvent(QKeyEvent *event);
+    void mousePressEvent(QMouseEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
+    void mouseReleaseEvent(QMouseEvent *event);
+    void wheelEvent(QWheelEvent *event);
 
 public slots:
     void undo();
