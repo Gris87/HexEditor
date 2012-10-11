@@ -28,12 +28,18 @@ HexEditor::HexEditor(QWidget *parent) :
         mAsciiChars[i]=QChar(9734);
     }
 
+
+
     mMode=INSERT;
     mReadOnly=false;
     mCursorPosition=0;
 
     mFont=QFont("Courier new", 1);     //Special action to calculate mCharWidth and mCharHeight at the next step
     setFont(QFont("Courier new", 10));
+
+    mSelectionStart=0;
+    mSelectionEnd=0;
+    mSelectionInit=0;
 
     mCursorVisible=true;
     mCursorAtTheLeft=true;
@@ -146,48 +152,78 @@ void HexEditor::resetCursorTimer()
 void HexEditor::resetSelection()
 {
     // TODO: Implement resetSelection
+    emit selectionChanged(mSelectionStart, mSelectionEnd);
 }
 
 void HexEditor::updateSelection()
 {
     // TODO: Implement updateSelection
+    emit selectionChanged(mSelectionStart, mSelectionEnd);
 }
 
 void HexEditor::scrollToCursor()
 {
-    int aOffsetX=-horizontalScrollBar()->value();
-    int aOffsetY=-verticalScrollBar()->value();
+    int aOffsetX=horizontalScrollBar()->value();
+    int aOffsetY=verticalScrollBar()->value();
     int aViewWidth=viewport()->width();
     int aViewHeight=viewport()->height();
 
 
 
-    int aCurCol=mCursorPosition % 32;
-    bool aIsSecondChar=(aCurCol & 1);
-    aCurCol>>=1;
-
+    int aCurCol=(mCursorPosition % 32) >> 1;
     int aCurRow=floor(mCursorPosition/32.0f);
 
+    int aCursorWidth;
     int aCursorX;
     int aCursorY=aCurRow*(mCharHeight+LINE_INTERVAL);
 
     if (mCursorAtTheLeft)
     {
-        aCursorX=(mAddressWidth+1+aCurCol*3)*mCharWidth;
-
-        if (aIsSecondChar)
-        {
-            aCursorX+=mCharWidth;
-        }
+        aCursorX=(mAddressWidth+2+aCurCol*3)*mCharWidth; // (mAddressWidth+1+aCurCol*3)*mCharWidth+mCharWidth
+        aCursorWidth=2*mCharWidth;
     }
     else
     {
         aCursorX=(mAddressWidth+50+aCurCol)*mCharWidth;
+        aCursorWidth=mCharWidth;
     }
 
 
 
+    if (aCursorX-(mAddressWidth+1)*mCharWidth<aOffsetX)
+    {
+        horizontalScrollBar()->setValue(aCursorX-(mAddressWidth+1)*mCharWidth);
+    }
+    else
+    if (aCursorX+aCursorWidth>aOffsetX+aViewWidth)
+    {
+        horizontalScrollBar()->setValue(aCursorX+aCursorWidth-aViewWidth);
+    }
 
+    if (aCursorY<aOffsetY)
+    {
+        verticalScrollBar()->setValue(aCursorY);
+    }
+    else
+    if (aCursorY+mCharHeight>aOffsetY+aViewHeight)
+    {
+        verticalScrollBar()->setValue(aCursorY+mCharHeight-aViewHeight);
+    }
+}
+
+void HexEditor::cursorMoved(bool aKeepSelection)
+{
+    if (aKeepSelection)
+    {
+        updateSelection();
+    }
+    else
+    {
+        resetSelection();
+    }
+
+    resetCursorTimer();
+    scrollToCursor();
 }
 
 void HexEditor::resizeEvent(QResizeEvent *event)
@@ -398,84 +434,112 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
     //                                     Movements
     // =======================================================================================
 
+    if (event->matches(QKeySequence::MoveToPreviousChar))
+    {
+        setCursorPosition(mCursorPosition-1);
+        cursorMoved(false);
+    }
+    else
     if (event->matches(QKeySequence::MoveToNextChar))
     {
         setCursorPosition(mCursorPosition+1);
-        resetSelection();
-        resetCursorTimer();
-        scrollToCursor();
-    }
-    else
-    if (event->matches(QKeySequence::MoveToPreviousChar))
-    {
-        setCursorPosition(mCursorPosition - 1);
-        resetSelection();
-        resetCursorTimer();
-        scrollToCursor();
+        cursorMoved(false);
     }
     else
     if (event->matches(QKeySequence::MoveToPreviousLine))
     {
         setCursorPosition(mCursorPosition-32);
-        resetSelection();
-        resetCursorTimer();
-        scrollToCursor();
+        cursorMoved(false);
     }
     else
     if (event->matches(QKeySequence::MoveToNextLine))
     {
         setCursorPosition(mCursorPosition+32);
-        resetSelection();
-        resetCursorTimer();
-        scrollToCursor();
-    }
-    else
-    if (event->matches(QKeySequence::MoveToEndOfLine))
-    {
-        setCursorPosition(mCursorPosition | 31);
-        resetSelection();
-        resetCursorTimer();
-        scrollToCursor();
+        cursorMoved(false);
     }
     else
     if (event->matches(QKeySequence::MoveToStartOfLine))
     {
         setCursorPosition(mCursorPosition-(mCursorPosition % 32));
-        resetSelection();
-        resetCursorTimer();
-        scrollToCursor();
+        cursorMoved(false);
     }
     else
-    if (event->matches(QKeySequence::MoveToNextPage))
+    if (event->matches(QKeySequence::MoveToEndOfLine))
     {
-        setCursorPosition(mCursorPosition+viewport()->height()/(mCharHeight+LINE_INTERVAL)*32);
-        resetSelection();
-        resetCursorTimer();
-        scrollToCursor();
+        setCursorPosition(mCursorPosition | 31);
+        cursorMoved(false);
     }
     else
     if (event->matches(QKeySequence::MoveToPreviousPage))
     {
         setCursorPosition(mCursorPosition-viewport()->height()/(mCharHeight+LINE_INTERVAL)*32);
-        resetSelection();
-        resetCursorTimer();
-        scrollToCursor();
+        cursorMoved(false);
     }
     else
-    if (event->matches(QKeySequence::MoveToEndOfDocument))
+    if (event->matches(QKeySequence::MoveToNextPage))
     {
-        setCursorPosition(mData.size()*2);
-        resetSelection();
-        resetCursorTimer();
-        scrollToCursor();
+        setCursorPosition(mCursorPosition+viewport()->height()/(mCharHeight+LINE_INTERVAL)*32);
+        cursorMoved(false);
     }
     else
     if (event->matches(QKeySequence::MoveToStartOfDocument))
     {
         setCursorPosition(0);
-        resetSelection();
-        resetCursorTimer();
-        scrollToCursor();
+        cursorMoved(false);
+    }
+    else
+    if (event->matches(QKeySequence::MoveToEndOfDocument))
+    {
+        setCursorPosition(mData.size()*2);
+        cursorMoved(false);
+    }
+    // =======================================================================================
+    //                                    Selecting
+    // =======================================================================================
+    else
+    if (event->matches(QKeySequence::SelectAll))
+    {
+    }
+    // =======================================================================================
+    //                                      Others
+    // =======================================================================================
+    else
+    if (event->matches(QKeySequence::Copy))
+    {
+    }
+    else
+    if ((event->key() == Qt::Key_Tab) && (event->modifiers() == Qt::NoModifier))
+    {
+        mCursorAtTheLeft=!mCursorAtTheLeft;
+        cursorMoved(true);
+    }
+    else
+    if ((event->key() == Qt::Key_Insert) && (event->modifiers() == Qt::NoModifier))
+    {
+        if (mMode==INSERT)
+        {
+            setMode(OVERWRITE);
+        }
+        else
+        {
+            setMode(INSERT);
+        }
+    }
+    // =======================================================================================
+    //                                     Editing
+    // =======================================================================================
+    else
+    if (!mReadOnly)
+    {
+        if (event->matches(QKeySequence::Undo))
+        {
+            undo();
+        }
+        else
+        if (event->matches(QKeySequence::Redo))
+        {
+            redo();
+        }
     }
 }
 
@@ -492,7 +556,7 @@ void HexEditor::setData(QByteArray const &aData)
     {
         mData=aData;
 
-        if ((mCursorPosition>>1)>mData.size())
+        if (mCursorPosition>mData.size()<<1)
         {
             mCursorPosition=mData.size()<<1;
         }
@@ -530,14 +594,14 @@ void HexEditor::setReadOnly(const bool &aReadOnly)
 
 int HexEditor::position() const
 {
-    return mCursorPosition/2;
+    return mCursorPosition>>1;
 }
 
 void HexEditor::setPosition(int aPosition)
 {
-    if (mCursorPosition/2!=aPosition)
+    if ((mCursorPosition>>1)!=aPosition)
     {
-        setCursorPosition(aPosition*2);
+        setCursorPosition(aPosition<<1);
     }
 }
 

@@ -84,6 +84,9 @@ protected:
     quint8  mAddressWidth;
     int     mLinesCount;
 
+    int     mSelectionStart;
+    int     mSelectionEnd;
+    int     mSelectionInit;
     bool    mCursorVisible;
     bool    mCursorAtTheLeft;
     QTimer  mCursorTimer;
@@ -93,6 +96,7 @@ protected:
     void resetSelection();
     void updateSelection();
     void scrollToCursor();
+    void cursorMoved(bool aKeepSelection);
     void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);
     void keyPressEvent(QKeyEvent *event);
@@ -106,7 +110,7 @@ protected slots:
 
 signals:
     void dataChanged();
-    void sizeChanged(int aSize);
+    void selectionChanged(int aStart, int aEnd);
     void modeChanged(Mode aMode);
     void positionChanged(int aPosition);
 };
