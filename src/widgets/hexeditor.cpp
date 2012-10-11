@@ -49,6 +49,7 @@ HexEditor::HexEditor(QWidget *parent) :
     mCursorTimer.start(500);
 
     mLeftButtonPressed=false;
+    mOneMoreSelection=false;
 }
 
 void HexEditor::undo()
@@ -67,9 +68,53 @@ void HexEditor::cursorBlicking()
     viewport()->update();
 }
 
-int HexEditor::charAt(QPoint aPos)
+int HexEditor::charAt(QPoint aPos, bool *aAtLeftPart)
 {
-    return 0;
+    int aOffsetX=horizontalScrollBar()->value();
+    int aOffsetY=verticalScrollBar()->value();
+
+    int aRow         = floor((aPos.y()+aOffsetY)/((double)(mCharHeight+LINE_INTERVAL)));
+    int aLeftColumn  = ((int)floor((aPos.x()+aOffsetX-(mAddressWidth+1)*mCharWidth)/((double)(mCharWidth*3))))<<1;
+    int aRightColumn = floor((aPos.x()+aOffsetX-(mAddressWidth+50)*mCharWidth)/((double)mCharWidth));
+
+    if (aPos.x()+aOffsetX-(mAddressWidth+1)*mCharWidth > mCharWidth*(aLeftColumn+(aLeftColumn>>1)+1))
+    {
+        ++aLeftColumn;
+    }
+
+    if (aAtLeftPart)
+    {
+        *aAtLeftPart=true;
+    }
+
+    if (aLeftColumn<0)
+    {
+        return aRow*32;
+    }
+    else
+    if (aLeftColumn>=32)
+    {
+        if (aAtLeftPart)
+        {
+            *aAtLeftPart=false;
+        }
+
+        if (aRightColumn<0)
+        {
+            return aRow*32;
+        }
+        else
+        if (aRightColumn>=16)
+        {
+            return (aRow+1)*32;
+        }
+
+        return aRow*32+(aRightColumn<<1);
+    }
+    else
+    {
+        return aRow*32+aLeftColumn;
+    }
 }
 
 int HexEditor::indexOf(const QByteArray &aArray, int aFrom) const
@@ -182,12 +227,14 @@ void HexEditor::updateSelection()
 
     if (aCurPosition<mSelectionInit)
     {
-        if (mSelectionStart!=aCurPosition || mSelectionEnd!=mSelectionInit)
+        if (mSelectionStart!=aCurPosition || mSelectionEnd!=mSelectionInit+(mOneMoreSelection ? 1 : 0))
         {
             mSelectionStart=aCurPosition;
-            mSelectionEnd=mSelectionInit;
+            mSelectionEnd=mSelectionInit+(mOneMoreSelection ? 1 : 0);
 
             aSelectionChanged=true;
+
+            mOneMoreSelection=false;
         }
     }
     else
@@ -849,8 +896,24 @@ void HexEditor::mousePressEvent(QMouseEvent *event)
 
     if (mLeftButtonPressed)
     {
-        setCursorPosition(charAt(event->pos()));
-        cursorMoved(event->modifiers() & Qt::ShiftModifier);
+        bool aShift=event->modifiers() & Qt::ShiftModifier;
+        int aPosition=charAt(event->pos(), &mCursorAtTheLeft);
+
+        if (aShift)
+        {
+            if ((aPosition>>1)>=mSelectionInit)
+            {
+                aPosition+=2;
+            }
+            else
+            {
+                mOneMoreSelection=true;
+            }
+        }
+
+        setCursorPosition(aPosition);
+
+        cursorMoved(aShift);
     }
 
     QAbstractScrollArea::mousePressEvent(event);
@@ -860,7 +923,18 @@ void HexEditor::mouseMoveEvent(QMouseEvent *event)
 {
     if (mLeftButtonPressed)
     {
-        setCursorPosition(charAt(event->pos()));
+        int aPosition=charAt(event->pos(), &mCursorAtTheLeft);
+
+        if ((aPosition>>1)>=mSelectionInit)
+        {
+            aPosition+=2;
+        }
+        else
+        {
+            mOneMoreSelection=true;
+        }
+
+        setCursorPosition(aPosition);
         cursorMoved(true);
     }
 

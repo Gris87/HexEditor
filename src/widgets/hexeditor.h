@@ -38,7 +38,7 @@ public:
 
 
 
-    int charAt(QPoint aPos);
+    int charAt(QPoint aPos, bool *aAtLeftPart=0);
     int indexOf(const QByteArray &aArray, int aFrom=0) const;
     int lastIndexOf(const QByteArray &aArray, int aFrom=0) const;
     void insert(int aIndex, const QByteArray &aArray);
@@ -93,6 +93,7 @@ protected:
     QTimer  mCursorTimer;
 
     bool    mLeftButtonPressed;
+    bool    mOneMoreSelection;
 
     void updateScrollBars();
     void resetCursorTimer();
