@@ -30,13 +30,13 @@ HexEditor::HexEditor(QWidget *parent) :
     mMode=INSERT;
     mReadOnly=false;
     mCursorPosition=0;
-    mAddressBackgroundColor.setRgb(192, 192, 192);
-    mHighlightingColor.setRgb(255, 0, 255);
-    mSelectionColor.setRgb(0, 0, 255);
-    mHighlightingEnabled=true;
 
     mFont=QFont("Courier new", 1);     //Special action to calculate mCharWidth and mCharHeight at the next step
     setFont(QFont("Courier new", 10));
+
+    mCursorVisible=true;
+    connect(&mCursorTimer, SIGNAL(timeout()), this, SLOT(cursorBlicking()));
+    mCursorTimer.start(500);
 }
 
 void HexEditor::undo()
@@ -47,6 +47,12 @@ void HexEditor::undo()
 void HexEditor::redo()
 {
     // TODO: Implement redo
+}
+
+void HexEditor::cursorBlicking()
+{
+    mCursorVisible=!mCursorVisible;
+    update();
 }
 
 int HexEditor::indexOf(const QByteArray &aArray, int aFrom) const
@@ -131,9 +137,10 @@ void HexEditor::resizeEvent(QResizeEvent *event)
     updateScrollBars();
 }
 
-void HexEditor::paintEvent(QPaintEvent *event)
+void HexEditor::paintEvent(QPaintEvent * /*event*/)
 {
     QPainter painter(viewport());
+    QPalette aPalette=palette();
 
     int aOffsetX=-horizontalScrollBar()->value();
     int aOffsetY=-verticalScrollBar()->value();
@@ -141,6 +148,17 @@ void HexEditor::paintEvent(QPaintEvent *event)
     int aViewHeight=viewport()->height();
 
     painter.setFont(mFont);
+    painter.setPen(aPalette.color(QPalette::Text));
+
+    // Clear all with a base color
+    {
+        painter.fillRect(0, 0, aViewWidth, aViewHeight, aPalette.color(QPalette::Base));
+    }
+
+    // Draw background for chars (Selection and cursor)
+    {
+
+    }
 
     // HEX data and ASCII characters
     {
@@ -214,8 +232,7 @@ void HexEditor::paintEvent(QPaintEvent *event)
 
     // Address field at the left side
     {
-        painter.setBrush(QBrush(mAddressBackgroundColor));
-        painter.fillRect(0, 0, mAddressWidth*mCharWidth, aViewHeight, mAddressBackgroundColor);
+        painter.fillRect(0, 0, mAddressWidth*mCharWidth, aViewHeight, aPalette.color(QPalette::AlternateBase));
 
         for (int i=0; i<mLinesCount; ++i)
         {
@@ -383,62 +400,6 @@ void HexEditor::setFont(const QFont &aFont)
         mCharHeight=aFontMetrics.height()+CHAR_INTERVAL;
 
         updateScrollBars();
-        update();
-    }
-}
-
-QColor HexEditor::addressBackgroundColor() const
-{
-    return mAddressBackgroundColor;
-}
-
-void HexEditor::setAddressBackgroundColor(QColor const &aColor)
-{
-    if (mAddressBackgroundColor!=aColor)
-    {
-        mAddressBackgroundColor=aColor;
-        update();
-    }
-}
-
-QColor HexEditor::highlightingColor() const
-{
-    return mHighlightingColor;
-}
-
-void HexEditor::setHighlightingColor(QColor const &aColor)
-{
-    if (mHighlightingColor!=aColor)
-    {
-        mHighlightingColor=aColor;
-        update();
-    }
-}
-
-QColor HexEditor::selectionColor() const
-{
-    return mSelectionColor;
-}
-
-void HexEditor::setSelectionColor(QColor const &aColor)
-{
-    if (mSelectionColor!=aColor)
-    {
-        mSelectionColor=aColor;
-        update();
-    }
-}
-
-bool HexEditor::isHighlightingEnabled() const
-{
-    return mHighlightingEnabled;
-}
-
-void HexEditor::setHighlightingEnabled(const bool &aEnable)
-{
-    if (mHighlightingEnabled!=aEnable)
-    {
-        mHighlightingEnabled=aEnable;
         update();
     }
 }

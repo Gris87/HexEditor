@@ -25,6 +25,13 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     mHexEditor->setData(aArray);
+
+    QPalette aPalette=mHexEditor->palette();
+
+    aPalette.setColor(QPalette::Base, QColor(245, 245, 255));
+    aPalette.setColor(QPalette::AlternateBase, QColor(10, 200, 90));
+
+    mHexEditor->setPalette(aPalette);
 }
 
 MainWindow::~MainWindow()

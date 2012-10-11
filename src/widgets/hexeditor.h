@@ -3,6 +3,8 @@
 
 #include <QAbstractScrollArea>
 
+#include <QTimer>
+
 class HexEditor : public QAbstractScrollArea
 {
     Q_OBJECT
@@ -14,10 +16,6 @@ public:
     Q_PROPERTY(qint64       Position                 READ position                 WRITE setPosition)
     Q_PROPERTY(int          CursorPosition           READ cursorPosition           WRITE setCursorPosition)
     Q_PROPERTY(QFont        Font                     READ font                     WRITE setFont)
-    Q_PROPERTY(QColor       AddressBackgroundColor   READ addressBackgroundColor   WRITE setAddressBackgroundColor)
-    Q_PROPERTY(QColor       HighlightingColor        READ highlightingColor        WRITE setHighlightingColor)
-    Q_PROPERTY(QColor       SelectionColor           READ selectionColor           WRITE setSelectionColor)
-    Q_PROPERTY(bool         HighlightingEnabled      READ isHighlightingEnabled    WRITE setHighlightingEnabled)
 
     Q_PROPERTY(int      charWidth      READ charWidth)
     Q_PROPERTY(int      charHeight     READ charHeight)
@@ -68,18 +66,6 @@ public:
     QFont font() const;
     void setFont(const QFont &aFont);
 
-    QColor addressBackgroundColor() const;
-    void setAddressBackgroundColor(QColor const &aColor);
-
-    QColor highlightingColor() const;
-    void setHighlightingColor(QColor const &aColor);
-
-    QColor selectionColor() const;
-    void setSelectionColor(QColor const &aColor);
-
-    bool isHighlightingEnabled() const;
-    void setHighlightingEnabled(const bool &aEnable);
-
     int    charWidth();
     int    charHeight();
     quint8 addressWidth();
@@ -91,16 +77,15 @@ protected:
     bool       mReadOnly;
     qint64     mCursorPosition;
     QFont      mFont;
-    QColor     mAddressBackgroundColor;
-    QColor     mHighlightingColor;
-    QColor     mSelectionColor;
-    bool       mHighlightingEnabled;
 
     QString mAsciiChars;
     int     mCharWidth;
     int     mCharHeight;
     quint8  mAddressWidth;
     int     mLinesCount;
+
+    QTimer  mCursorTimer;
+    bool    mCursorVisible;
 
     void updateScrollBars();
     void resizeEvent(QResizeEvent *event);
@@ -109,6 +94,9 @@ protected:
 public slots:
     void undo();
     void redo();
+
+protected slots:
+    void cursorBlicking();
 
 signals:
     void dataChanged();
