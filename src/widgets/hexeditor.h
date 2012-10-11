@@ -84,8 +84,9 @@ protected:
     quint8  mAddressWidth;
     int     mLinesCount;
 
-    QTimer  mCursorTimer;
     bool    mCursorVisible;
+    bool    mCursorAtTheLeft;
+    QTimer  mCursorTimer;
 
     void updateScrollBars();
     void resizeEvent(QResizeEvent *event);

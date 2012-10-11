@@ -35,6 +35,7 @@ HexEditor::HexEditor(QWidget *parent) :
     setFont(QFont("Courier new", 10));
 
     mCursorVisible=true;
+    mCursorAtTheLeft=true;
     connect(&mCursorTimer, SIGNAL(timeout()), this, SLOT(cursorBlicking()));
     mCursorTimer.start(500);
 }
@@ -52,7 +53,7 @@ void HexEditor::redo()
 void HexEditor::cursorBlicking()
 {
     mCursorVisible=!mCursorVisible;
-    update();
+    viewport()->update();
 }
 
 int HexEditor::indexOf(const QByteArray &aArray, int aFrom) const
@@ -150,14 +151,66 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
     painter.setFont(mFont);
     painter.setPen(aPalette.color(QPalette::Text));
 
-    // Clear all with a base color
-    {
-        painter.fillRect(0, 0, aViewWidth, aViewHeight, aPalette.color(QPalette::Base));
-    }
-
     // Draw background for chars (Selection and cursor)
     {
+        // Check for selection
+        if (false)
+        {
+            // Draw selection
+        }
+        else
+        {
+            // Draw cursor
+            int aCurRow=floor(mCursorPosition/32.0f);
+            int aCursorY=aCurRow*(mCharHeight+LINE_INTERVAL)+aOffsetY;
 
+            if (aCursorY+mCharHeight>=0 && aCursorY<=aViewHeight)
+            {
+                int aCurCol=mCursorPosition % 32;
+                int aCursorX=(mAddressWidth+1+aCurCol*3)*mCharWidth+aOffsetX;
+
+                if (aCurCol % 2==1)
+                {
+                    aCursorX+=mCharWidth;
+                }
+
+                if (
+                    (
+                     !mCursorAtTheLeft
+                     ||
+                     mCursorVisible
+                    )
+                    &&
+                    (
+                     aCursorX>=(mAddressWidth-1)*mCharWidth
+                     &&
+                     aCursorX<=aViewWidth
+                    )
+                   )
+                {
+                    painter.fillRect(aCursorX, aCursorY, mCharWidth, mCharHeight, aPalette.color(QPalette::Highlight));
+                }
+
+                aCursorX=(mAddressWidth+50+aCurCol)*mCharWidth+aOffsetX;
+
+                if (
+                    (
+                     mCursorAtTheLeft
+                     ||
+                     mCursorVisible
+                    )
+                    &&
+                    (
+                     aCursorX>=(mAddressWidth-1)*mCharWidth
+                     &&
+                     aCursorX<=aViewWidth
+                    )
+                   )
+                {
+                    painter.fillRect(aCursorX, aCursorY, mCharWidth, mCharHeight, aPalette.color(QPalette::Highlight));
+                }
+            }
+        }
     }
 
     // HEX data and ASCII characters
@@ -297,7 +350,7 @@ void HexEditor::setData(QByteArray const &aData)
         }
 
         updateScrollBars();
-        update();
+        viewport()->update();
 
         emit dataChanged();
     }
@@ -362,7 +415,7 @@ void HexEditor::setCursorPosition(qint64 aCursorPos)
         bool aSamePos=((mCursorPosition>>1)==(aCursorPos>>1));
 
         mCursorPosition=aCursorPos;
-        update();
+        viewport()->update();
 
         if (!aSamePos)
         {
@@ -400,7 +453,7 @@ void HexEditor::setFont(const QFont &aFont)
         mCharHeight=aFontMetrics.height()+CHAR_INTERVAL;
 
         updateScrollBars();
-        update();
+        viewport()->update();
     }
 }
 
