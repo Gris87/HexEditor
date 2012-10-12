@@ -17,7 +17,7 @@ HexEditor::HexEditor(QWidget *parent) :
     for (int i=0; i<256; ++i)
     {
         char aChar=i;
-        mAsciiChars.append(QString::fromAscii(&aChar, 1));
+        mAsciiChars.append(QString::fromLatin1(&aChar, 1));
     }
 
     mAsciiChars[9] =QChar(26);
@@ -309,7 +309,7 @@ void HexEditor::copy()
             if (mSelectionStart<mData.size())
             {
                 char aChar=mData.at(mSelectionStart);
-                aToClipboard=QString::fromAscii(&aChar, 1);
+                aToClipboard=QString::fromLatin1(&aChar, 1);
             }
         }
         else
@@ -320,7 +320,7 @@ void HexEditor::copy()
 
                 if (aChar)
                 {
-                    aToClipboard.append(QString::fromAscii(&aChar, 1));
+                    aToClipboard.append(QString::fromLatin1(&aChar, 1));
                 }
             }
         }
@@ -331,12 +331,30 @@ void HexEditor::copy()
 
 void HexEditor::paste()
 {
+    int aSelStart=mSelectionStart;
 
+    remove(mSelectionStart, mSelectionEnd-mSelectionStart);
+
+    QString aText=QApplication::clipboard()->text();
+    QByteArray aArray;
+
+    if (mCursorAtTheLeft)
+    {
+        aArray=QByteArray::fromHex(aText.toUtf8());
+    }
+    else
+    {
+        aArray=aText.toLatin1();
+    }
+
+    insert(aSelStart, aArray);
+    setPosition(aSelStart+aArray.length());
+    cursorMoved(false);
 }
 
 QString HexEditor::toString()
 {
-    return QString::fromAscii(mData);
+    return QString::fromLatin1(mData);
 }
 
 // ------------------------------------------------------------------

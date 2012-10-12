@@ -44,6 +44,7 @@ public:
 
 
 
+    void scrollToCursor();
     int charAt(QPoint aPos, bool *aAtLeftPart=0);
     int indexOf(const QByteArray &aArray, int aFrom=0) const;
     int lastIndexOf(const QByteArray &aArray, int aFrom=0) const;
@@ -117,7 +118,6 @@ protected:
     void resetCursorTimer();
     void resetSelection();
     void updateSelection();
-    void scrollToCursor();
     void cursorMoved(bool aKeepSelection);
     void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);
