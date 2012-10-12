@@ -335,7 +335,15 @@ void HexEditor::setSelection(int aPos, int aCount)
 void HexEditor::cut()
 {
     copy();
-    remove(mSelectionStart, mSelectionEnd-mSelectionStart);
+
+    if (mSelectionStart==mSelectionEnd)
+    {
+        remove(mSelectionStart, 1);
+    }
+    else
+    {
+        remove(mSelectionStart, mSelectionEnd-mSelectionStart);
+    }
 
     setPosition(mSelectionStart);
     cursorMoved(false);
@@ -1133,15 +1141,100 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
 
             if (aKeyText.length()>0)
             {
-                char aPressedKey=aKeyText.at(0).toLatin1();
+                char aKey=aKeyText.at(0).toLatin1();
 
                 if (mCursorAtTheLeft)
                 {
+                    if (
+                        (
+                         aKey>='0'
+                         &&
+                         aKey<='9'
+                        )
+                        ||
+                        (
+                         aKey>='a'
+                         &&
+                         aKey<='f'
+                        )
+                        ||
+                        (
+                         aKey>='A'
+                         &&
+                         aKey<='F'
+                        )
+                       )
+                    {
+                        if (mSelectionStart!=mSelectionEnd)
+                        {
+                            remove(mSelectionStart, mSelectionEnd-mSelectionStart);
+                            setPosition(mSelectionStart);
+                            cursorMoved(false);
+                        }
 
+                        if (
+                            mSelectionStart==mData.size()
+                            ||
+                            (
+                             mMode==INSERT
+                             &&
+                             (mCursorPosition & 1)==0
+                            )
+                           )
+                        {
+                            insert(mSelectionStart, 0);
+                        }
+
+                        if (mSelectionStart<mData.size())
+                        {
+                            QByteArray aHexChar=QString::number((quint8)mData.at(mSelectionStart), 16).toLatin1();
+
+                            if (aHexChar.length()<2)
+                            {
+                                aHexChar.insert(0, 48); // 48 == "0"
+                            }
+
+                            if (mCursorPosition & 1)
+                            {
+                                aHexChar[1]=aKey;
+                            }
+                            else
+                            {
+                                aHexChar[0]=aKey;
+                            }
+
+                            replace(mSelectionStart, QByteArray::fromHex(aHexChar).at(0));
+
+                            setCursorPosition(mCursorPosition+1);
+                            cursorMoved(false);
+                        }
+                    }
                 }
                 else
                 {
+                    if (mSelectionStart!=mSelectionEnd)
+                    {
+                        remove(mSelectionStart, mSelectionEnd-mSelectionStart);
+                        setPosition(mSelectionStart);
+                        cursorMoved(false);
+                    }
 
+                    if (
+                        mSelectionStart==mData.size()
+                        ||
+                        mMode==INSERT
+                       )
+                    {
+                        insert(mSelectionStart, 0);
+                    }
+
+                    if (mSelectionStart<mData.size())
+                    {
+                        replace(mSelectionStart, aKey);
+
+                        setPosition(mSelectionStart+1);
+                        cursorMoved(false);
+                    }
                 }
             }
         }
