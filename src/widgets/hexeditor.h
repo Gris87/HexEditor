@@ -53,8 +53,10 @@ public:
     void replace(int aPos, char aChar);
     void replace(int aPos, const QByteArray &aArray);
     void replace(int aPos, int aLength, const QByteArray &aArray);
-    void copy();
     void setSelection(int aPos, int aCount);
+    void cut();
+    void copy();
+    void paste();
     QString toString();
 
     // ------------------------------------------------------------------

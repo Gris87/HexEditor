@@ -240,6 +240,33 @@ void HexEditor::replace(int aPos, int aLength, const QByteArray &aArray)
     resetSelection();
 }
 
+void HexEditor::setSelection(int aPos, int aCount)
+{
+    if (aCount<0)
+    {
+        aCount=0;
+    }
+
+    qint64 aPrevPos=mCursorPosition;
+
+    mCursorPosition=aPos<<1;
+    resetSelection();
+
+    mCursorPosition+=(aCount+1)<<1;
+    updateSelection();
+
+    mCursorPosition=aPrevPos;
+}
+
+void HexEditor::cut()
+{
+    copy();
+    remove(mSelectionStart, mSelectionEnd-mSelectionStart);
+
+    setPosition(mSelectionStart);
+    cursorMoved(false);
+}
+
 void HexEditor::copy()
 {
     QString aToClipboard;
@@ -302,27 +329,14 @@ void HexEditor::copy()
     QApplication::clipboard()->setText(aToClipboard);
 }
 
+void HexEditor::paste()
+{
+
+}
+
 QString HexEditor::toString()
 {
     return QString::fromAscii(mData);
-}
-
-void HexEditor::setSelection(int aPos, int aCount)
-{
-    if (aCount<0)
-    {
-        aCount=0;
-    }
-
-    qint64 aPrevPos=mCursorPosition;
-
-    mCursorPosition=aPos<<1;
-    resetSelection();
-
-    mCursorPosition+=(aCount+1)<<1;
-    updateSelection();
-
-    mCursorPosition=aPrevPos;
 }
 
 // ------------------------------------------------------------------
@@ -1020,6 +1034,7 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
                     else
                     {
                         replace(mSelectionStart, 0);
+                        ++aSelStart;
                     }
                 }
             }
@@ -1048,6 +1063,8 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
                     {
                         replace(mSelectionStart-1, 0);
                     }
+
+                    --aSelStart;
                 }
             }
             else
@@ -1055,21 +1072,18 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
                 remove(mSelectionStart, mSelectionEnd-mSelectionStart);
             }
 
-            setPosition(aSelStart-1);
+            setPosition(aSelStart);
             cursorMoved(false);
         }
         else
         if (event->matches(QKeySequence::Cut))
         {
-            copy();
-            remove(mSelectionStart, mSelectionEnd-mSelectionStart);
-
-            setPosition(mSelectionStart);
-            cursorMoved(false);
+            cut();
         }
         else
         if (event->matches(QKeySequence::Paste))
         {
+            paste();
         }
         else
         {
@@ -1336,7 +1350,9 @@ void SingleUndoCommand::undo()
         break;
         case Replace:
         {
-            mEditor->mData.replace(mPos, 1, &mOldChar);
+            QByteArray aArray;
+            aArray.append(mOldChar);
+            mEditor->mData.replace(mPos, 1, aArray);
         }
         break;
         case Remove:
@@ -1363,7 +1379,9 @@ void SingleUndoCommand::redo()
         case Replace:
         {
             mOldChar=mEditor->mData.at(mPos);
-            mEditor->mData.replace(mPos, 1, &mNewChar);
+            QByteArray aArray;
+            aArray.append(mNewChar);
+            mEditor->mData.replace(mPos, 1, aArray);
         }
         break;
         case Remove:
