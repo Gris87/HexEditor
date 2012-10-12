@@ -668,7 +668,14 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
                     )
                    )
                 {
-                    painter.fillRect(aCursorX, aCursorY, mCharWidth, mCharHeight, aHighlightColor);
+                    if (mMode==INSERT)
+                    {
+                        painter.fillRect(aCursorX, aCursorY+mCharHeight, mCharWidth, LINE_INTERVAL, aHighlightColor);
+                    }
+                    else
+                    {
+                        painter.fillRect(aCursorX, aCursorY, mCharWidth, mCharHeight, aHighlightColor);
+                    }
                 }
 
                 aCursorX=(mAddressWidth+50+aCurCol)*mCharWidth+aOffsetX;
@@ -687,7 +694,14 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
                     )
                    )
                 {
-                    painter.fillRect(aCursorX, aCursorY, mCharWidth, mCharHeight, aHighlightColor);
+                    if (mMode==INSERT)
+                    {
+                        painter.fillRect(aCursorX, aCursorY+mCharHeight, mCharWidth, LINE_INTERVAL, aHighlightColor);
+                    }
+                    else
+                    {
+                        painter.fillRect(aCursorX, aCursorY, mCharWidth, mCharHeight, aHighlightColor);
+                    }
                 }
             }
         }
@@ -738,7 +752,7 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
                     aHexChar.insert(0, "0");
                 }
 
-                if (i==mSelectionStart && i==mSelectionEnd)
+                if (i==mSelectionStart && i==mSelectionEnd && mMode==OVERWRITE)
                 {
                     if ((mCursorAtTheLeft && !mCursorVisible) || (mCursorPosition & 1))
                     {
@@ -752,7 +766,7 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
 
                 painter.drawText(aCharX,            aCharY, mCharWidth, mCharHeight, Qt::AlignCenter, aHexChar.at(0));
 
-                if (i==mSelectionStart && i==mSelectionEnd)
+                if (i==mSelectionStart && i==mSelectionEnd && mMode==OVERWRITE)
                 {
                     if ((!mCursorAtTheLeft || mCursorVisible) && (mCursorPosition & 1))
                     {
@@ -778,6 +792,8 @@ void HexEditor::paintEvent(QPaintEvent * /*event*/)
                      i==mSelectionStart
                      &&
                      i==mSelectionEnd
+                     &&
+                     mMode==OVERWRITE
                      &&
                      (
                       mCursorAtTheLeft
@@ -1342,6 +1358,9 @@ void HexEditor::setMode(const Mode &aMode)
     if (mMode!=aMode)
     {
         mMode=aMode;
+
+        resetCursorTimer();
+
         emit modeChanged(mMode);
     }
 }
