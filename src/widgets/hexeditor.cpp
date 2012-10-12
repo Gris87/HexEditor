@@ -112,9 +112,9 @@ int HexEditor::charAt(QPoint aPos, bool *aAtLeftPart)
             return aRow*32;
         }
         else
-        if (aRightColumn>=16)
+        if (aRightColumn>=15)
         {
-            return (aRow+1)*32;
+            return aRow*32+30;
         }
 
         return aRow*32+(aRightColumn<<1);
@@ -142,7 +142,7 @@ void HexEditor::insert(int aIndex, char aChar)
     emit dataChanged();
 
     setCursorPosition(mCursorPosition);
-    cursorMoved(false);
+    resetSelection();
 }
 
 void HexEditor::insert(int aIndex, const QByteArray &aArray)
@@ -167,7 +167,7 @@ void HexEditor::insert(int aIndex, const QByteArray &aArray)
     emit dataChanged();
 
     setCursorPosition(mCursorPosition);
-    cursorMoved(false);
+    resetSelection();
 }
 
 void HexEditor::remove(int aPos, int aLength)
@@ -207,7 +207,7 @@ void HexEditor::remove(int aPos, int aLength)
     emit dataChanged();
 
     setCursorPosition(mCursorPosition);
-    cursorMoved(false);
+    resetSelection();
 }
 
 void HexEditor::replace(int aPos, char aChar)
@@ -217,7 +217,7 @@ void HexEditor::replace(int aPos, char aChar)
     emit dataChanged();
 
     setCursorPosition(mCursorPosition);
-    cursorMoved(false);
+    resetSelection();
 }
 
 void HexEditor::replace(int aPos, const QByteArray &aArray)
@@ -227,7 +227,7 @@ void HexEditor::replace(int aPos, const QByteArray &aArray)
     emit dataChanged();
 
     setCursorPosition(mCursorPosition);
-    cursorMoved(false);
+    resetSelection();
 }
 
 void HexEditor::replace(int aPos, int aLength, const QByteArray &aArray)
@@ -237,7 +237,7 @@ void HexEditor::replace(int aPos, int aLength, const QByteArray &aArray)
     emit dataChanged();
 
     setCursorPosition(mCursorPosition);
-    cursorMoved(false);
+    resetSelection();
 }
 
 void HexEditor::copy()
@@ -1003,6 +1003,80 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
         if (event->matches(QKeySequence::Redo))
         {
             redo();
+        }
+        else
+        if (event->matches(QKeySequence::Delete))
+        {
+            if (mSelectionStart==mSelectionEnd)
+            {
+                if (mSelectionStart<mData.size())
+                {
+                    if (mMode==INSERT)
+                    {
+                        remove(mSelectionStart, 1);
+                    }
+                    else
+                    {
+                        replace(mSelectionStart, 0);
+                    }
+                }
+            }
+            else
+            {
+                remove(mSelectionStart, mSelectionEnd-mSelectionStart);
+            }
+
+            setPosition(mSelectionStart);
+            cursorMoved(false);
+        }
+        else
+        if ((event->key() == Qt::Key_Backspace) && (event->modifiers() == Qt::NoModifier))
+        {
+            if (mSelectionStart==mSelectionEnd)
+            {
+                if (mSelectionStart>0)
+                {
+                    if (mMode==INSERT)
+                    {
+                        remove(mSelectionStart-1, 1);
+                    }
+                    else
+                    {
+                        replace(mSelectionStart-1, 0);
+                    }
+                }
+            }
+            else
+            {
+                remove(mSelectionStart, mSelectionEnd-mSelectionStart);
+            }
+
+            setPosition(mSelectionStart);
+            cursorMoved(false);
+        }
+        else
+        if (event->matches(QKeySequence::Cut))
+        {
+            copy();
+            remove(mSelectionStart, mSelectionEnd-mSelectionStart);
+
+            setPosition(mSelectionStart);
+            cursorMoved(false);
+        }
+        else
+        if (event->matches(QKeySequence::Paste))
+        {
+        }
+        else
+        {
+            if (mCursorAtTheLeft)
+            {
+
+            }
+            else
+            {
+
+            }
         }
     }
 }
