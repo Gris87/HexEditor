@@ -1007,6 +1007,8 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
         else
         if (event->matches(QKeySequence::Delete))
         {
+            int aSelStart=mSelectionStart;
+
             if (mSelectionStart==mSelectionEnd)
             {
                 if (mSelectionStart<mData.size())
@@ -1026,12 +1028,14 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
                 remove(mSelectionStart, mSelectionEnd-mSelectionStart);
             }
 
-            setPosition(mSelectionStart);
+            setPosition(aSelStart);
             cursorMoved(false);
         }
         else
         if ((event->key() == Qt::Key_Backspace) && (event->modifiers() == Qt::NoModifier))
         {
+            int aSelStart=mSelectionStart;
+
             if (mSelectionStart==mSelectionEnd)
             {
                 if (mSelectionStart>0)
@@ -1051,7 +1055,7 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
                 remove(mSelectionStart, mSelectionEnd-mSelectionStart);
             }
 
-            setPosition(mSelectionStart);
+            setPosition(aSelStart-1);
             cursorMoved(false);
         }
         else
@@ -1162,13 +1166,8 @@ void HexEditor::setData(QByteArray const &aData)
     if (mData!=aData)
     {
         mData=aData;
-
+        setCursorPosition(mCursorPosition);
         mUndoStack.clear();
-
-        if (mCursorPosition>mData.size()<<1)
-        {
-            mCursorPosition=mData.size()<<1;
-        }
 
         updateScrollBars();
         viewport()->update();
@@ -1328,16 +1327,70 @@ SingleUndoCommand::SingleUndoCommand(HexEditor *aEditor, Type aType, int aPos, c
 
 void SingleUndoCommand::undo()
 {
+    switch (mType)
+    {
+        case Insert:
+        {
+            mEditor->mData.remove(mPos, 1);
+        }
+        break;
+        case Replace:
+        {
+            mEditor->mData.replace(mPos, 1, &mOldChar);
+        }
+        break;
+        case Remove:
+        {
+            mEditor->mData.insert(mPos, mOldChar);
+        }
+        break;
+    }
 
+    mEditor->setCursorPosition(mPrevPosition);
 }
 
 void SingleUndoCommand::redo()
 {
+    mPrevPosition=mEditor->mCursorPosition;
 
+    switch (mType)
+    {
+        case Insert:
+        {
+            mEditor->mData.insert(mPos, mNewChar);
+        }
+        break;
+        case Replace:
+        {
+            mOldChar=mEditor->mData.at(mPos);
+            mEditor->mData.replace(mPos, 1, &mNewChar);
+        }
+        break;
+        case Remove:
+        {
+            mOldChar=mEditor->mData.at(mPos);
+            mEditor->mData.remove(mPos, 1);
+        }
+        break;
+    }
 }
 
 bool SingleUndoCommand::mergeWith(const QUndoCommand *command)
 {
+    SingleUndoCommand *aAnotherCommand=(SingleUndoCommand *)command;
+
+    if (
+        mType!=Remove
+        &&
+        aAnotherCommand->mType==Replace
+        &&
+        aAnotherCommand->mPos==mPos
+       )
+    {
+        mNewChar=aAnotherCommand->mNewChar;
+        return true;
+    }
+
     return false;
 }
 
@@ -1362,10 +1415,50 @@ MultipleUndoCommand::MultipleUndoCommand(HexEditor *aEditor, Type aType, int aPo
 
 void MultipleUndoCommand::undo()
 {
+    switch (mType)
+    {
+        case Insert:
+        {
+            mEditor->mData.remove(mPos, mNewArray.length());
+        }
+        break;
+        case Replace:
+        {
+            mEditor->mData.replace(mPos, mNewArray.length(), mOldArray);
+        }
+        break;
+        case Remove:
+        {
+            mEditor->mData.insert(mPos, mOldArray);
+        }
+        break;
+    }
 
+    mEditor->setCursorPosition(mPrevPosition);
 }
 
 void MultipleUndoCommand::redo()
 {
+    mPrevPosition=mEditor->mCursorPosition;
 
+    switch (mType)
+    {
+        case Insert:
+        {
+            mEditor->mData.insert(mPos, mNewArray);
+        }
+        break;
+        case Replace:
+        {
+            mOldArray=mEditor->mData.mid(mPos, mLength);
+            mEditor->mData.replace(mPos, mLength, mNewArray);
+        }
+        break;
+        case Remove:
+        {
+            mOldArray=mEditor->mData.mid(mPos, mLength);
+            mEditor->mData.remove(mPos, mLength);
+        }
+        break;
+    }
 }

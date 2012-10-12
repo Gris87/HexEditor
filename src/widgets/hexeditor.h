@@ -10,6 +10,9 @@ class HexEditor : public QAbstractScrollArea
 {
     Q_OBJECT
 
+    friend class SingleUndoCommand;
+    friend class MultipleUndoCommand;
+
 public:
     Q_PROPERTY(QByteArray   Data                     READ data                     WRITE setData)
     Q_PROPERTY(Mode         Mode                     READ mode                     WRITE setMode)
@@ -157,10 +160,11 @@ public:
 
 private:
     HexEditor *mEditor;
-    Type mType;
-    int mPos;
-    char mNewChar;
-    char mOldChar;
+    Type       mType;
+    int        mPos;
+    char       mNewChar;
+    char       mOldChar;
+    qint64     mPrevPosition;
 };
 
 // *********************************************************************************
@@ -181,12 +185,13 @@ public:
     void redo();
 
 private:
-    HexEditor *mEditor;
-    Type mType;
-    int mPos;
-    int mLength;
-    QByteArray mNewArray;
-    QByteArray mOldArray;
+    HexEditor  *mEditor;
+    Type        mType;
+    int         mPos;
+    int         mLength;
+    QByteArray  mNewArray;
+    QByteArray  mOldArray;
+    qint64      mPrevPosition;
 };
 
 #endif // HEXEDITOR_H
