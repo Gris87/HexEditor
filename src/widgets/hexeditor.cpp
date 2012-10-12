@@ -54,12 +54,20 @@ HexEditor::HexEditor(QWidget *parent) :
 
 void HexEditor::undo()
 {
-    // TODO: Implement undo
+    mUndoStack.undo();
+    emit dataChanged();
+
+    setCursorPosition(mCursorPosition);
+    cursorMoved(false);
 }
 
 void HexEditor::redo()
 {
-    // TODO: Implement redo
+    mUndoStack.redo();
+    emit dataChanged();
+
+    setCursorPosition(mCursorPosition);
+    cursorMoved(false);
 }
 
 void HexEditor::cursorBlicking()
@@ -127,29 +135,194 @@ int HexEditor::lastIndexOf(const QByteArray &aArray, int aFrom) const
     return mData.lastIndexOf(aArray, aFrom);
 }
 
-void HexEditor::insert(int aIndex, const QByteArray &aArray)
-{
-    // TODO: Implement insert
-}
-
 void HexEditor::insert(int aIndex, char aChar)
 {
-    // TODO: Implement insert
+    SingleUndoCommand *aCommand=new SingleUndoCommand(this, SingleUndoCommand::Insert, aIndex, aChar);
+    mUndoStack.push(aCommand);
+    emit dataChanged();
+
+    setCursorPosition(mCursorPosition);
+    cursorMoved(false);
+}
+
+void HexEditor::insert(int aIndex, const QByteArray &aArray)
+{
+    if (aArray.length()==0)
+    {
+        return;
+    }
+
+    MultipleUndoCommand *aCommand;
+
+    if (mMode==INSERT)
+    {
+        aCommand=new MultipleUndoCommand(this, MultipleUndoCommand::Insert, aIndex, aArray.length(), aArray);
+    }
+    else
+    {
+        aCommand=new MultipleUndoCommand(this, MultipleUndoCommand::Replace, aIndex, aArray.length(), aArray);
+    }
+
+    mUndoStack.push(aCommand);
+    emit dataChanged();
+
+    setCursorPosition(mCursorPosition);
+    cursorMoved(false);
 }
 
 void HexEditor::remove(int aPos, int aLength)
 {
-    // TODO: Implement remove
+    if (aLength<=0)
+    {
+        return;
+    }
+
+    QUndoCommand *aCommand;
+
+    if (aLength==1)
+    {
+        if (mMode==INSERT)
+        {
+            aCommand=new SingleUndoCommand(this, SingleUndoCommand::Remove, aPos);
+        }
+        else
+        {
+            aCommand=new SingleUndoCommand(this, SingleUndoCommand::Replace, aPos, 0);
+        }
+    }
+    else
+    {
+        if (mMode==INSERT)
+        {
+            aCommand=new MultipleUndoCommand(this, MultipleUndoCommand::Remove, aPos, aLength);
+        }
+        else
+        {
+            QByteArray aArray=QByteArray(aLength, 0);
+            aCommand=new MultipleUndoCommand(this, MultipleUndoCommand::Replace, aPos, aLength, aArray);
+        }
+    }
+
+    mUndoStack.push(aCommand);
+    emit dataChanged();
+
+    setCursorPosition(mCursorPosition);
+    cursorMoved(false);
+}
+
+void HexEditor::replace(int aPos, char aChar)
+{
+    SingleUndoCommand *aCommand=new SingleUndoCommand(this, SingleUndoCommand::Replace, aPos, aChar);
+    mUndoStack.push(aCommand);
+    emit dataChanged();
+
+    setCursorPosition(mCursorPosition);
+    cursorMoved(false);
+}
+
+void HexEditor::replace(int aPos, const QByteArray &aArray)
+{
+    MultipleUndoCommand *aCommand=new MultipleUndoCommand(this, MultipleUndoCommand::Replace, aPos, aArray.length(), aArray);
+    mUndoStack.push(aCommand);
+    emit dataChanged();
+
+    setCursorPosition(mCursorPosition);
+    cursorMoved(false);
 }
 
 void HexEditor::replace(int aPos, int aLength, const QByteArray &aArray)
 {
-    // TODO: Implement replace
+    MultipleUndoCommand *aCommand=new MultipleUndoCommand(this, MultipleUndoCommand::Replace, aPos, aLength, aArray);
+    mUndoStack.push(aCommand);
+    emit dataChanged();
+
+    setCursorPosition(mCursorPosition);
+    cursorMoved(false);
+}
+
+void HexEditor::copy()
+{
+    QString aToClipboard;
+
+    if (mCursorAtTheLeft)
+    {
+        if (mSelectionStart==mSelectionEnd)
+        {
+            if (mSelectionStart<mData.size())
+            {
+                quint8 aChar=mData.at(mSelectionStart);
+                aToClipboard=QString::number(aChar, 16).toUpper();
+
+                if (aToClipboard.length()==1)
+                {
+                    aToClipboard.insert(0, "0");
+                }
+            }
+        }
+        else
+        {
+            for (int i=mSelectionStart; i<mSelectionEnd && i<mData.size(); ++i)
+            {
+                quint8 aChar=mData.at(i);
+                QString aHexChar=QString::number(aChar, 16).toUpper();
+
+                if (aHexChar.length()==1)
+                {
+                    aToClipboard.append("0");
+                }
+
+                aToClipboard.append(aHexChar);
+            }
+        }
+    }
+    else
+    {
+        if (mSelectionStart==mSelectionEnd)
+        {
+            if (mSelectionStart<mData.size())
+            {
+                char aChar=mData.at(mSelectionStart);
+                aToClipboard=QString::fromAscii(&aChar, 1);
+            }
+        }
+        else
+        {
+            for (int i=mSelectionStart; i<mSelectionEnd && i<mData.size(); ++i)
+            {
+                char aChar=mData.at(i);
+
+                if (aChar)
+                {
+                    aToClipboard.append(QString::fromAscii(&aChar, 1));
+                }
+            }
+        }
+    }
+
+    QApplication::clipboard()->setText(aToClipboard);
 }
 
 QString HexEditor::toString()
 {
     return QString::fromAscii(mData);
+}
+
+void HexEditor::setSelection(int aPos, int aCount)
+{
+    if (aCount<0)
+    {
+        aCount=0;
+    }
+
+    qint64 aPrevPos=mCursorPosition;
+
+    mCursorPosition=aPos<<1;
+    resetSelection();
+
+    mCursorPosition+=(aCount+1)<<1;
+    updateSelection();
+
+    mCursorPosition=aPrevPos;
 }
 
 // ------------------------------------------------------------------
@@ -215,6 +388,7 @@ void HexEditor::resetSelection()
 
     if (aSelectionChanged)
     {
+        viewport()->update();
         emit selectionChanged(mSelectionStart, mSelectionEnd);
     }
 }
@@ -250,6 +424,7 @@ void HexEditor::updateSelection()
 
     if (aSelectionChanged)
     {
+        viewport()->update();
         emit selectionChanged(mSelectionStart, mSelectionEnd);
     }
 }
@@ -643,7 +818,6 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
     // =======================================================================================
     //                                     Movements
     // =======================================================================================
-
     if (event->matches(QKeySequence::MoveToPreviousChar))
     {
         if (mCursorAtTheLeft)
@@ -795,64 +969,7 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
     else
     if (event->matches(QKeySequence::Copy))
     {
-        QString aToClipboard;
-
-        if (mCursorAtTheLeft)
-        {
-            if (mSelectionStart==mSelectionEnd)
-            {
-                if (mSelectionStart<mData.size())
-                {
-                    quint8 aChar=mData.at(mSelectionStart);
-                    aToClipboard=QString::number(aChar, 16).toUpper();
-
-                    if (aToClipboard.length()==1)
-                    {
-                        aToClipboard.insert(0, "0");
-                    }
-                }
-            }
-            else
-            {
-                for (int i=mSelectionStart; i<mSelectionEnd && i<mData.size(); ++i)
-                {
-                    quint8 aChar=mData.at(i);
-                    QString aHexChar=QString::number(aChar, 16).toUpper();
-
-                    if (aHexChar.length()==1)
-                    {
-                        aToClipboard.append("0");
-                    }
-
-                    aToClipboard.append(aHexChar);
-                }
-            }
-        }
-        else
-        {
-            if (mSelectionStart==mSelectionEnd)
-            {
-                if (mSelectionStart<mData.size())
-                {
-                    char aChar=mData.at(mSelectionStart);
-                    aToClipboard=QString::fromAscii(&aChar, 1);
-                }
-            }
-            else
-            {
-                for (int i=mSelectionStart; i<mSelectionEnd && i<mData.size(); ++i)
-                {
-                    char aChar=mData.at(i);
-
-                    if (aChar)
-                    {
-                        aToClipboard.append(QString::fromAscii(&aChar, 1));
-                    }
-                }
-            }
-        }
-
-        QApplication::clipboard()->setText(aToClipboard);
+        copy();
     }
     else
     if ((event->key() == Qt::Key_Tab) && (event->modifiers() == Qt::NoModifier))
@@ -912,7 +1029,6 @@ void HexEditor::mousePressEvent(QMouseEvent *event)
         }
 
         setCursorPosition(aPosition);
-
         cursorMoved(aShift);
     }
 
@@ -972,6 +1088,8 @@ void HexEditor::setData(QByteArray const &aData)
     if (mData!=aData)
     {
         mData=aData;
+
+        mUndoStack.clear();
 
         if (mCursorPosition>mData.size()<<1)
         {
@@ -1104,4 +1222,76 @@ quint8 HexEditor::addressWidth()
 int HexEditor::linesCount()
 {
     return mLinesCount;
+}
+
+int HexEditor::selectionStart()
+{
+    return mSelectionStart;
+}
+
+int HexEditor::selectionEnd()
+{
+    return mSelectionEnd;
+}
+
+bool HexEditor::isCursorAtTheLeft()
+{
+    return mCursorAtTheLeft;
+}
+
+// *********************************************************************************
+//                                 SingleUndoCommand
+// *********************************************************************************
+
+SingleUndoCommand::SingleUndoCommand(HexEditor *aEditor, Type aType, int aPos, char aNewChar, QUndoCommand *parent) :
+    QUndoCommand(parent)
+{
+    mEditor=aEditor;
+    mType=aType;
+    mPos=aPos;
+    mNewChar=aNewChar;
+}
+
+void SingleUndoCommand::undo()
+{
+
+}
+
+void SingleUndoCommand::redo()
+{
+
+}
+
+bool SingleUndoCommand::mergeWith(const QUndoCommand *command)
+{
+    return false;
+}
+
+int SingleUndoCommand::id() const
+{
+    return 1;
+}
+
+// *********************************************************************************
+//                                MultipleUndoCommand
+// *********************************************************************************
+
+MultipleUndoCommand::MultipleUndoCommand(HexEditor *aEditor, Type aType, int aPos, int aLength, QByteArray aNewArray, QUndoCommand *parent) :
+    QUndoCommand(parent)
+{
+    mEditor=aEditor;
+    mType=aType;
+    mPos=aPos;
+    mLength=aLength;
+    mNewArray=aNewArray;
+}
+
+void MultipleUndoCommand::undo()
+{
+
+}
+
+void MultipleUndoCommand::redo()
+{
+
 }

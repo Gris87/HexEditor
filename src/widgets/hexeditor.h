@@ -2,6 +2,7 @@
 #define HEXEDITOR_H
 
 #include <QAbstractScrollArea>
+#include <QUndoCommand>
 
 #include <QTimer>
 
@@ -22,7 +23,9 @@ public:
     Q_PROPERTY(quint8   addressWidth   READ addressWidth)
     Q_PROPERTY(int      linesCount     READ linesCount)
 
-
+    Q_PROPERTY(int    SelectionStart    READ selectionStart)
+    Q_PROPERTY(int    SelectionEnd      READ selectionEnd)
+    Q_PROPERTY(bool   CursorAtTheLeft   READ isCursorAtTheLeft)
 
     Q_ENUMS(Mode)
 
@@ -41,10 +44,14 @@ public:
     int charAt(QPoint aPos, bool *aAtLeftPart=0);
     int indexOf(const QByteArray &aArray, int aFrom=0) const;
     int lastIndexOf(const QByteArray &aArray, int aFrom=0) const;
-    void insert(int aIndex, const QByteArray &aArray);
     void insert(int aIndex, char aChar);
+    void insert(int aIndex, const QByteArray &aArray);
     void remove(int aPos, int aLength=1);
+    void replace(int aPos, char aChar);
+    void replace(int aPos, const QByteArray &aArray);
     void replace(int aPos, int aLength, const QByteArray &aArray);
+    void copy();
+    void setSelection(int aPos, int aCount);
     QString toString();
 
     // ------------------------------------------------------------------
@@ -72,6 +79,10 @@ public:
     quint8 addressWidth();
     int    linesCount();
 
+    int  selectionStart();
+    int  selectionEnd();
+    bool isCursorAtTheLeft();
+
 protected:
     QByteArray mData;
     Mode       mMode;
@@ -95,11 +106,13 @@ protected:
     bool    mLeftButtonPressed;
     bool    mOneMoreSelection;
 
+    QUndoStack mUndoStack;
+
     void updateScrollBars();
     void resetCursorTimer();
     void resetSelection();
     void updateSelection();
-    void scrollToCursor();    
+    void scrollToCursor();
     void cursorMoved(bool aKeepSelection);
     void resizeEvent(QResizeEvent *event);
     void paintEvent(QPaintEvent *event);
@@ -121,6 +134,59 @@ signals:
     void selectionChanged(int aStart, int aEnd);
     void modeChanged(Mode aMode);
     void positionChanged(int aPosition);
+};
+
+// *********************************************************************************
+
+class SingleUndoCommand : public QUndoCommand
+{
+public:
+    enum Type
+    {
+        Insert,
+        Remove,
+        Replace
+    };
+
+    SingleUndoCommand(HexEditor *aEditor, Type aType, int aPos, char aNewChar=0, QUndoCommand *parent=0);
+
+    void undo();
+    void redo();
+    bool mergeWith(const QUndoCommand *command);
+    int id() const;
+
+private:
+    HexEditor *mEditor;
+    Type mType;
+    int mPos;
+    char mNewChar;
+    char mOldChar;
+};
+
+// *********************************************************************************
+
+class MultipleUndoCommand : public QUndoCommand
+{
+public:
+    enum Type
+    {
+        Insert,
+        Remove,
+        Replace
+    };
+
+    MultipleUndoCommand(HexEditor *aEditor, Type aType, int aPos, int aLength, QByteArray aNewArray=QByteArray(), QUndoCommand *parent=0);
+
+    void undo();
+    void redo();
+
+private:
+    HexEditor *mEditor;
+    Type mType;
+    int mPos;
+    int mLength;
+    QByteArray mNewArray;
+    QByteArray mOldArray;
 };
 
 #endif // HEXEDITOR_H
