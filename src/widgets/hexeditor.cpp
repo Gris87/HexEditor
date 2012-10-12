@@ -59,6 +59,9 @@ void HexEditor::undo()
 
     setCursorPosition(mCursorPosition);
     cursorMoved(false);
+
+    updateScrollBars();
+    update();
 }
 
 void HexEditor::redo()
@@ -68,12 +71,65 @@ void HexEditor::redo()
 
     setCursorPosition(mCursorPosition);
     cursorMoved(false);
+
+    updateScrollBars();
+    update();
 }
 
 void HexEditor::cursorBlicking()
 {
     mCursorVisible=!mCursorVisible;
     viewport()->update();
+}
+
+void HexEditor::scrollToCursor()
+{
+    int aOffsetX=horizontalScrollBar()->value();
+    int aOffsetY=verticalScrollBar()->value();
+    int aViewWidth=viewport()->width();
+    int aViewHeight=viewport()->height();
+
+
+
+    int aCurCol=(mCursorPosition % 32) >> 1;
+    int aCurRow=floor(mCursorPosition/32.0f);
+
+    int aCursorWidth;
+    int aCursorX;
+    int aCursorY=aCurRow*(mCharHeight+LINE_INTERVAL);
+
+    if (mCursorAtTheLeft)
+    {
+        aCursorX=(mAddressWidth+2+aCurCol*3)*mCharWidth; // (mAddressWidth+1+aCurCol*3)*mCharWidth+mCharWidth
+        aCursorWidth=2*mCharWidth;
+    }
+    else
+    {
+        aCursorX=(mAddressWidth+50+aCurCol)*mCharWidth;
+        aCursorWidth=mCharWidth;
+    }
+
+
+
+    if (aCursorX-(mAddressWidth+1)*mCharWidth<aOffsetX)
+    {
+        horizontalScrollBar()->setValue(aCursorX-(mAddressWidth+1)*mCharWidth);
+    }
+    else
+    if (aCursorX+aCursorWidth>aOffsetX+aViewWidth)
+    {
+        horizontalScrollBar()->setValue(aCursorX+aCursorWidth-aViewWidth);
+    }
+
+    if (aCursorY<aOffsetY)
+    {
+        verticalScrollBar()->setValue(aCursorY);
+    }
+    else
+    if (aCursorY+mCharHeight>aOffsetY+aViewHeight)
+    {
+        verticalScrollBar()->setValue(aCursorY+mCharHeight-aViewHeight);
+    }
 }
 
 int HexEditor::charAt(QPoint aPos, bool *aAtLeftPart)
@@ -143,6 +199,9 @@ void HexEditor::insert(int aIndex, char aChar)
 
     setCursorPosition(mCursorPosition);
     resetSelection();
+
+    updateScrollBars();
+    update();
 }
 
 void HexEditor::insert(int aIndex, const QByteArray &aArray)
@@ -168,6 +227,9 @@ void HexEditor::insert(int aIndex, const QByteArray &aArray)
 
     setCursorPosition(mCursorPosition);
     resetSelection();
+
+    updateScrollBars();
+    update();
 }
 
 void HexEditor::remove(int aPos, int aLength)
@@ -208,6 +270,9 @@ void HexEditor::remove(int aPos, int aLength)
 
     setCursorPosition(mCursorPosition);
     resetSelection();
+
+    updateScrollBars();
+    update();
 }
 
 void HexEditor::replace(int aPos, char aChar)
@@ -218,6 +283,9 @@ void HexEditor::replace(int aPos, char aChar)
 
     setCursorPosition(mCursorPosition);
     resetSelection();
+
+    updateScrollBars();
+    update();
 }
 
 void HexEditor::replace(int aPos, const QByteArray &aArray)
@@ -228,6 +296,9 @@ void HexEditor::replace(int aPos, const QByteArray &aArray)
 
     setCursorPosition(mCursorPosition);
     resetSelection();
+
+    updateScrollBars();
+    update();
 }
 
 void HexEditor::replace(int aPos, int aLength, const QByteArray &aArray)
@@ -238,6 +309,9 @@ void HexEditor::replace(int aPos, int aLength, const QByteArray &aArray)
 
     setCursorPosition(mCursorPosition);
     resetSelection();
+
+    updateScrollBars();
+    update();
 }
 
 void HexEditor::setSelection(int aPos, int aCount)
@@ -458,56 +532,6 @@ void HexEditor::updateSelection()
     {
         viewport()->update();
         emit selectionChanged(mSelectionStart, mSelectionEnd);
-    }
-}
-
-void HexEditor::scrollToCursor()
-{
-    int aOffsetX=horizontalScrollBar()->value();
-    int aOffsetY=verticalScrollBar()->value();
-    int aViewWidth=viewport()->width();
-    int aViewHeight=viewport()->height();
-
-
-
-    int aCurCol=(mCursorPosition % 32) >> 1;
-    int aCurRow=floor(mCursorPosition/32.0f);
-
-    int aCursorWidth;
-    int aCursorX;
-    int aCursorY=aCurRow*(mCharHeight+LINE_INTERVAL);
-
-    if (mCursorAtTheLeft)
-    {
-        aCursorX=(mAddressWidth+2+aCurCol*3)*mCharWidth; // (mAddressWidth+1+aCurCol*3)*mCharWidth+mCharWidth
-        aCursorWidth=2*mCharWidth;
-    }
-    else
-    {
-        aCursorX=(mAddressWidth+50+aCurCol)*mCharWidth;
-        aCursorWidth=mCharWidth;
-    }
-
-
-
-    if (aCursorX-(mAddressWidth+1)*mCharWidth<aOffsetX)
-    {
-        horizontalScrollBar()->setValue(aCursorX-(mAddressWidth+1)*mCharWidth);
-    }
-    else
-    if (aCursorX+aCursorWidth>aOffsetX+aViewWidth)
-    {
-        horizontalScrollBar()->setValue(aCursorX+aCursorWidth-aViewWidth);
-    }
-
-    if (aCursorY<aOffsetY)
-    {
-        verticalScrollBar()->setValue(aCursorY);
-    }
-    else
-    if (aCursorY+mCharHeight>aOffsetY+aViewHeight)
-    {
-        verticalScrollBar()->setValue(aCursorY+mCharHeight-aViewHeight);
     }
 }
 
@@ -1105,13 +1129,20 @@ void HexEditor::keyPressEvent(QKeyEvent *event)
         }
         else
         {
-            if (mCursorAtTheLeft)
-            {
+            QString aKeyText=event->text();
 
-            }
-            else
+            if (aKeyText.length()>0)
             {
+                char aPressedKey=aKeyText.at(0).toLatin1();
 
+                if (mCursorAtTheLeft)
+                {
+
+                }
+                else
+                {
+
+                }
             }
         }
     }
