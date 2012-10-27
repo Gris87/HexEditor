@@ -61,7 +61,7 @@ void HexEditor::undo()
     cursorMoved(false);
 
     updateScrollBars();
-    update();
+    viewport()->update();
 }
 
 void HexEditor::redo()
@@ -73,7 +73,7 @@ void HexEditor::redo()
     cursorMoved(false);
 
     updateScrollBars();
-    update();
+    viewport()->update();
 }
 
 void HexEditor::cursorBlicking()
@@ -201,7 +201,7 @@ void HexEditor::insert(int aIndex, char aChar)
     resetSelection();
 
     updateScrollBars();
-    update();
+    viewport()->update();
 }
 
 void HexEditor::insert(int aIndex, const QByteArray &aArray)
@@ -229,7 +229,7 @@ void HexEditor::insert(int aIndex, const QByteArray &aArray)
     resetSelection();
 
     updateScrollBars();
-    update();
+    viewport()->update();
 }
 
 void HexEditor::remove(int aPos, int aLength)
@@ -272,7 +272,7 @@ void HexEditor::remove(int aPos, int aLength)
     resetSelection();
 
     updateScrollBars();
-    update();
+    viewport()->update();
 }
 
 void HexEditor::replace(int aPos, char aChar)
@@ -285,7 +285,7 @@ void HexEditor::replace(int aPos, char aChar)
     resetSelection();
 
     updateScrollBars();
-    update();
+    viewport()->update();
 }
 
 void HexEditor::replace(int aPos, const QByteArray &aArray)
@@ -298,7 +298,7 @@ void HexEditor::replace(int aPos, const QByteArray &aArray)
     resetSelection();
 
     updateScrollBars();
-    update();
+    viewport()->update();
 }
 
 void HexEditor::replace(int aPos, int aLength, const QByteArray &aArray)
@@ -311,7 +311,7 @@ void HexEditor::replace(int aPos, int aLength, const QByteArray &aArray)
     resetSelection();
 
     updateScrollBars();
-    update();
+    viewport()->update();
 }
 
 void HexEditor::setSelection(int aPos, int aCount)

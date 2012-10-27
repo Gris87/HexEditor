@@ -2,8 +2,8 @@
 #define HEXEDITOR_H
 
 #include <QAbstractScrollArea>
-#include <QUndoCommand>
 
+#include <QUndoCommand>
 #include <QTimer>
 
 class HexEditor : public QAbstractScrollArea
@@ -96,21 +96,21 @@ protected:
     qint64     mCursorPosition;
     QFont      mFont;
 
-    QString mAsciiChars;
-    int     mCharWidth;
-    int     mCharHeight;
-    quint8  mAddressWidth;
-    int     mLinesCount;
+    QString    mAsciiChars;
+    int        mCharWidth;
+    int        mCharHeight;
+    quint8     mAddressWidth;
+    int        mLinesCount;
 
-    int     mSelectionStart;
-    int     mSelectionEnd;
-    int     mSelectionInit;
-    bool    mCursorVisible;
-    bool    mCursorAtTheLeft;
-    QTimer  mCursorTimer;
+    int        mSelectionStart;
+    int        mSelectionEnd;
+    int        mSelectionInit;
+    bool       mCursorVisible;
+    bool       mCursorAtTheLeft;
+    QTimer     mCursorTimer;
 
-    bool    mLeftButtonPressed;
-    bool    mOneMoreSelection;
+    bool       mLeftButtonPressed;
+    bool       mOneMoreSelection;
 
     QUndoStack mUndoStack;
 
