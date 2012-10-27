@@ -443,18 +443,24 @@ QString HexEditor::toString()
 
 void HexEditor::updateScrollBars()
 {
-    mAddressWidth=1;
+    mAddressWidth=0;
     int aDataSize=mData.size();
+    int aCurSize=1;
 
-    while (aDataSize>16)
+    while (aCurSize<aDataSize)
     {
         ++mAddressWidth;
-        aDataSize>>=4;
+        aCurSize<<=4;
     }
 
-    mLinesCount=floor(mData.size()/16.0f);
+    if (mAddressWidth==0)
+    {
+        ++mAddressWidth;
+    }
 
-    if (mData.size() % 16!=0)
+    mLinesCount=floor(aDataSize/16.0f);
+
+    if (aDataSize % 16!=0)
     {
         ++mLinesCount;
     }
