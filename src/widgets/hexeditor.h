@@ -10,8 +10,8 @@ class HexEditor : public QAbstractScrollArea
 {
     Q_OBJECT
 
-    friend class SingleUndoCommand;
-    friend class MultipleUndoCommand;
+    friend class SingleHexUndoCommand;
+    friend class MultipleHexUndoCommand;
 
 public:
     Q_PROPERTY(QByteArray   Data                     READ data                     WRITE setData)
@@ -47,7 +47,9 @@ public:
     void scrollToCursor();
     int charAt(QPoint aPos, bool *aAtLeftPart=0);
     int indexOf(const QByteArray &aArray, int aFrom=0) const;
+    int indexOf(const char &aChar, int aFrom=0) const;
     int lastIndexOf(const QByteArray &aArray, int aFrom=0) const;
+    int lastIndexOf(const char &aChar, int aFrom=0) const;
     void insert(int aIndex, char aChar);
     void insert(int aIndex, const QByteArray &aArray);
     void remove(int aPos, int aLength=1);
@@ -143,7 +145,7 @@ signals:
 
 // *********************************************************************************
 
-class SingleUndoCommand : public QUndoCommand
+class SingleHexUndoCommand : public QUndoCommand
 {
 public:
     enum Type
@@ -153,7 +155,7 @@ public:
         Replace
     };
 
-    SingleUndoCommand(HexEditor *aEditor, Type aType, int aPos, char aNewChar=0, QUndoCommand *parent=0);
+    SingleHexUndoCommand(HexEditor *aEditor, Type aType, int aPos, char aNewChar=0, QUndoCommand *parent=0);
 
     void undo();
     void redo();
@@ -171,7 +173,7 @@ private:
 
 // *********************************************************************************
 
-class MultipleUndoCommand : public QUndoCommand
+class MultipleHexUndoCommand : public QUndoCommand
 {
 public:
     enum Type
@@ -181,7 +183,7 @@ public:
         Replace
     };
 
-    MultipleUndoCommand(HexEditor *aEditor, Type aType, int aPos, int aLength, QByteArray aNewArray=QByteArray(), QUndoCommand *parent=0);
+    MultipleHexUndoCommand(HexEditor *aEditor, Type aType, int aPos, int aLength, QByteArray aNewArray=QByteArray(), QUndoCommand *parent=0);
 
     void undo();
     void redo();
